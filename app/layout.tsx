@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +16,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Supermarket Catalog",
   description: "Manage and export your supermarket product catalog.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Catalog",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -27,7 +37,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegistration />
+        {children}
+      </body>
     </html>
   );
 }
