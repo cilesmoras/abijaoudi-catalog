@@ -45,8 +45,10 @@ export default function HomePage() {
     const searchText = search.trim().toLowerCase();
 
     return items.filter((item) => {
-      const categoryMatch = selectedCategory === "all" || item.category_id === selectedCategory;
-      const searchMatch = !searchText || item.name.toLowerCase().includes(searchText);
+      const categoryMatch =
+        selectedCategory === "all" || item.category_id === selectedCategory;
+      const searchMatch =
+        !searchText || item.name.toLowerCase().includes(searchText);
       return categoryMatch && searchMatch;
     });
   }, [items, selectedCategory, search]);
@@ -58,7 +60,9 @@ export default function HomePage() {
 
   function toggleSelected(itemId: string) {
     setSelectedItemIds((current) =>
-      current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId],
+      current.includes(itemId)
+        ? current.filter((id) => id !== itemId)
+        : [...current, itemId],
     );
   }
 
@@ -66,10 +70,17 @@ export default function HomePage() {
     <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8 md:px-10">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Supermarket Catalog</h1>
-          <p className="mt-2 text-gray-600">Browse products and export selected items as a PDF.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Supermarket Catalog
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Browse products and export selected items as a PDF.
+          </p>
         </div>
-        <Link href="/admin" className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-gray-50">
+        <Link
+          href="/admin"
+          className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+        >
           Admin
         </Link>
       </div>
@@ -88,8 +99,14 @@ export default function HomePage() {
           />
         </div>
         <div className="space-y-2 md:text-right">
-          <p className="text-sm text-gray-600">{selectedItems.length} item(s) selected for export</p>
-          <ExportButton items={selectedItems} categories={categories} disabled={selectedItems.length === 0} />
+          <p className="text-sm text-gray-600">
+            {selectedItems.length} item(s) selected for export
+          </p>
+          <ExportButton
+            items={selectedItems}
+            categories={categories}
+            disabled={selectedItems.length === 0}
+          />
         </div>
       </div>
 
@@ -104,7 +121,7 @@ export default function HomePage() {
               return (
                 <article
                   key={item.id}
-                  className={`relative rounded-xl ${checked ? "ring-2 ring-emerald-600" : ""}`}
+                  className={`relative rounded-xl ${checked ? "ring-2 ring-blue-600" : ""}`}
                 >
                   <label className="absolute left-3 top-3 z-10 rounded-md bg-white/95 px-2 py-1 text-xs font-medium shadow-sm">
                     <input

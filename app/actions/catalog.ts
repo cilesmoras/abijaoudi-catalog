@@ -15,7 +15,9 @@ export type ItemInput = {
 };
 
 function toIsoString(value: string | Date) {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 function mapCategoryRow(row: {
@@ -41,10 +43,10 @@ function mapItemRow(row: {
   image_url: string | null;
   created_at: Date | string;
   categories: {
-    id: string | null;
-    name: string | null;
-    slug: string | null;
-  };
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
 }): Item {
   return {
     id: row.id,
@@ -54,11 +56,11 @@ function mapItemRow(row: {
     price: row.price,
     image_url: row.image_url,
     created_at: toIsoString(row.created_at),
-    categories: row.categories.id
+    categories: row.categories
       ? {
           id: row.categories.id,
-          name: row.categories.name!,
-          slug: row.categories.slug!,
+          name: row.categories.name,
+          slug: row.categories.slug,
         }
       : null,
   };
@@ -142,8 +144,8 @@ export async function deleteCategoryAction(id: string) {
 }
 
 export async function createItemAction(input: ItemInput) {
-  if (!input.name?.trim() || input.price === undefined) {
-    return { error: "Name and price are required" };
+  if (!input.name?.trim() || input.price === undefined || !input.category_id) {
+    return { error: "Name, price, and category are required" };
   }
 
   const [created] = await db
@@ -163,8 +165,8 @@ export async function createItemAction(input: ItemInput) {
 }
 
 export async function updateItemAction(id: string, input: ItemInput) {
-  if (!input.name?.trim() || input.price === undefined) {
-    return { error: "Name and price are required" };
+  if (!input.name?.trim() || input.price === undefined || !input.category_id) {
+    return { error: "Name, price, and category are required" };
   }
 
   const [updated] = await db

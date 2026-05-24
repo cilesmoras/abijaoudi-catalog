@@ -5,8 +5,19 @@ import Link from "next/link";
 export default function AdminDashboardPage() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
-      <h1 className="text-3xl font-bold tracking-tight text-gray-900">Catalog Admin</h1>
-      <p className="mt-2 text-gray-600">Manage products and categories for the public catalog.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Catalog Admin
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Manage products and categories for the public catalog.
+          </p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link href="/">Back to catalog</Link>
+        </Button>
+      </div>
 
       <section className="mt-8 grid gap-5 md:grid-cols-2">
         <Card>

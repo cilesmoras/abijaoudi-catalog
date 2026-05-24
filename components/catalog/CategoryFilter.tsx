@@ -19,7 +19,7 @@ export function CategoryFilter({
       <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent p-0">
         <TabsTrigger
           value="all"
-          className="rounded-full border border-gray-200 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600"
+          className="rounded-full border border-gray-200 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600"
         >
           All
         </TabsTrigger>
@@ -27,7 +27,7 @@ export function CategoryFilter({
           <TabsTrigger
             key={cat.id}
             value={cat.id}
-            className="rounded-full border border-gray-200 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600"
+            className="rounded-full border border-gray-200 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:border-blue-600"
           >
             {cat.name}
           </TabsTrigger>

@@ -6,7 +6,9 @@ import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 
 function toIsoString(value: string | Date) {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 function mapItemRow(row: {
@@ -21,7 +23,7 @@ function mapItemRow(row: {
     id: string | null;
     name: string | null;
     slug: string | null;
-  };
+  } | null;
 }) {
   return {
     id: row.id,
@@ -31,7 +33,7 @@ function mapItemRow(row: {
     price: row.price,
     image_url: row.image_url,
     created_at: toIsoString(row.created_at),
-    categories: row.categories.id
+    categories: row.categories?.id
       ? {
           id: row.categories.id,
           name: row.categories.name!,
@@ -90,7 +92,8 @@ export async function PUT(
     .where(eq(items.id, id))
     .returning({ id: items.id });
 
-  if (!updated) return Response.json({ error: "Item not found" }, { status: 404 });
+  if (!updated)
+    return Response.json({ error: "Item not found" }, { status: 404 });
 
   const [data] = await db
     .select({

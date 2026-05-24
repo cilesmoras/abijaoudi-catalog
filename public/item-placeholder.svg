@@ -1,0 +1,7 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="600" fill="#F3F4F6"/>
+  <rect x="120" y="150" width="360" height="300" rx="24" fill="#E5E7EB"/>
+  <path d="M170 390L255 300C263 291 277 291 285 300L360 375L403 332C411 324 424 324 432 332L470 370V390H170Z" fill="#9CA3AF"/>
+  <circle cx="238" cy="242" r="30" fill="#9CA3AF"/>
+  <text x="300" y="470" text-anchor="middle" fill="#6B7280" font-family="Arial, sans-serif" font-size="28">No photo uploaded</text>
+</svg>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Category } from "@/lib/types";
+import { getItemImageSrc } from "@/lib/utils";
 import { FormEvent, useEffect, useState } from "react";
 
 export type ItemFormValues = {
@@ -114,6 +115,11 @@ export function ItemForm({
       return;
     }
 
+    if (categoryId === EMPTY_CATEGORY) {
+      setError("Category is required");
+      return;
+    }
+
     let finalImageUrl = imageUrl.trim() ? imageUrl.trim() : null;
 
     if (selectedFile) {
@@ -138,12 +144,12 @@ export function ItemForm({
       name: name.trim(),
       description: description.trim() ? description.trim() : null,
       price: parsedPrice,
-      category_id: categoryId === EMPTY_CATEGORY ? null : categoryId,
+      category_id: categoryId,
       image_url: finalImageUrl,
     });
   }
 
-  const displayImageUrl = previewUrl || imageUrl;
+  const displayImageUrl = previewUrl || getItemImageSrc(imageUrl);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -191,7 +197,9 @@ export function ItemForm({
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={EMPTY_CATEGORY}>No category</SelectItem>
+            <SelectItem value={EMPTY_CATEGORY} disabled>
+              Select a category
+            </SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
@@ -220,13 +228,11 @@ export function ItemForm({
             }
           }}
         />
-        {displayImageUrl ? (
-          <img
-            src={displayImageUrl}
-            alt="Uploaded preview"
-            className="h-28 w-28 rounded-md border object-cover"
-          />
-        ) : null}
+        <img
+          src={displayImageUrl}
+          alt="Uploaded preview"
+          className="h-28 w-28 rounded-md border object-cover"
+        />
         {uploadingImage ? (
           <p className="text-sm text-gray-500">Uploading image…</p>
         ) : null}

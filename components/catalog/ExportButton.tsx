@@ -35,14 +35,15 @@ export function ExportButton({
       const colCount = 4;
       const gap = 4;
       const cardW = (pageW - margin * 2 - gap * (colCount - 1)) / colCount;
-      const imageAreaH = 32;
+      // Match catalog card behavior: square media area with object-cover cropping
+      const imageAreaH = cardW;
       const cardH = imageAreaH + 26;
       const categoryById = new Map(
         categories.map((category) => [category.id, category.name]),
       );
 
       // Title page header
-      doc.setFillColor(5, 150, 105); // emerald-600
+      doc.setFillColor(37, 99, 235); // blue-600
       doc.rect(0, 0, pageW, 20, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
@@ -91,8 +92,9 @@ export function ExportButton({
             const drawY = y + (imageAreaH - drawH) / 2;
             // clip to the image area so overflow is hidden
             doc.saveGraphicsState();
-            doc.rect(x, y, cardW, imageAreaH, "S"); // defines clip path
+            doc.rect(x, y, cardW, imageAreaH, null); // defines clip path only
             doc.clip();
+            doc.discardPath();
             doc.addImage(
               imgData,
               getImageFormatFromDataUrl(imgData),
@@ -119,7 +121,7 @@ export function ExportButton({
           "Uncategorized";
         doc.setFont("helvetica", "bold");
         doc.setFontSize(6.5);
-        doc.setTextColor(5, 150, 105);
+        doc.setTextColor(37, 99, 235);
         doc.text(categoryLabel.toUpperCase(), textX, textY);
 
         textY += 4;
@@ -143,7 +145,7 @@ export function ExportButton({
         textY += 3;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
-        doc.setTextColor(5, 150, 105);
+        doc.setTextColor(37, 99, 235);
         doc.text(formatPrice(item.price), textX, textY);
 
         col++;
@@ -173,7 +175,7 @@ export function ExportButton({
     <Button
       onClick={handleExport}
       disabled={loading || disabled}
-      className="bg-emerald-600 hover:bg-emerald-700"
+      className="bg-blue-600 hover:bg-blue-700"
     >
       <Download className="w-4 h-4" />
       {loading ? "Generating PDF…" : "Export PDF"}
