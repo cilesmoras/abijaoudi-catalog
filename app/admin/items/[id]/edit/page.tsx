@@ -9,13 +9,16 @@ import { ItemForm, type ItemFormValues } from "@/components/admin/ItemForm";
 import { Button } from "@/components/ui/button";
 import type { Category, Item } from "@/lib/types";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 export default function EditItemPage() {
   const router = useRouter();
   const params = useParams<{ id: string | string[] }>();
-  const itemId = useMemo(() => (Array.isArray(params.id) ? params.id[0] : params.id), [params.id]);
+  const itemId = useMemo(
+    () => (Array.isArray(params.id) ? params.id[0] : params.id),
+    [params.id],
+  );
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [item, setItem] = useState<Item | null>(null);
@@ -82,7 +85,9 @@ export default function EditItemPage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Edit item</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          Edit item
+        </h1>
         <Button variant="outline" asChild>
           <Link href="/admin/items">Back to items</Link>
         </Button>
