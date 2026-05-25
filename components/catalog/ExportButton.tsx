@@ -59,100 +59,155 @@ export function ExportButton({
       doc.setFont("helvetica", "normal");
       doc.text(date, pageW / 2, 18, { align: "center" });
 
-      let y = 28;
-      let col = 0;
-
+      // Group items by category
+      const categoryHeaderH = 10;
+      const grouped = new Map<string, Item[]>();
       for (const item of items) {
-        if (y + cardH > pageH - margin - 8) {
-          doc.addPage();
-          y = margin;
-          col = 0;
-        }
-
-        const x = margin + col * (cardW + gap);
-
-        // Card shell
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(229, 231, 235);
-        doc.roundedRect(x, y, cardW, cardH, 3, 3, "FD");
-
-        // Image area — object-cover: fill the area, crop overflow via clip
-        doc.setFillColor(249, 250, 251);
-        doc.rect(x, y, cardW, imageAreaH, "F");
-
-        if (item.image_url) {
-          try {
-            const imgData = await fetchImageAsDataUrl(item.image_url);
-            const dims = await getImageDimensions(imgData);
-            // cover: scale up until both dimensions fill the area
-            const scale = Math.max(cardW / dims.w, imageAreaH / dims.h);
-            const drawW = dims.w * scale;
-            const drawH = dims.h * scale;
-            const drawX = x + (cardW - drawW) / 2;
-            const drawY = y + (imageAreaH - drawH) / 2;
-            // clip to the image area so overflow is hidden
-            doc.saveGraphicsState();
-            doc.rect(x, y, cardW, imageAreaH, null); // defines clip path only
-            doc.clip();
-            doc.discardPath();
-            doc.addImage(
-              imgData,
-              getImageFormatFromDataUrl(imgData),
-              drawX,
-              drawY,
-              drawW,
-              drawH,
-            );
-            doc.restoreGraphicsState();
-          } catch {
-            drawImagePlaceholder(doc, x, y, cardW, imageAreaH);
-          }
-        } else {
-          drawImagePlaceholder(doc, x, y, cardW, imageAreaH);
-        }
-
-        const textX = x + 3;
-        const textW = cardW - 6;
-        let textY = y + imageAreaH + 5;
-
-        const categoryLabel =
+        const label =
           item.categories?.name ??
           (item.category_id ? categoryById.get(item.category_id) : undefined) ??
           "Uncategorized";
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(6.5);
-        doc.setTextColor(37, 99, 235);
-        doc.text(categoryLabel.toUpperCase(), textX, textY);
+        if (!grouped.has(label)) grouped.set(label, []);
+        grouped.get(label)!.push(item);
+      }
+      // Sort groups alphabetically, "Uncategorized" last
+      const sortedGroups = [...grouped.entries()].sort(([a], [b]) => {
+        if (a === "Uncategorized") return 1;
+        if (b === "Uncategorized") return -1;
+        return a.localeCompare(b);
+      });
 
-        textY += 4;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(17, 24, 39);
-        const nameLines = doc.splitTextToSize(item.name, textW);
-        doc.text(nameLines.slice(0, 2), textX, textY);
-        textY += nameLines.slice(0, 2).length * 3.5;
+      let y = 28;
+      let col = 0;
 
-        if (item.description) {
-          textY += 2;
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(6.5);
-          doc.setTextColor(107, 114, 128);
-          const descLines = doc.splitTextToSize(item.description, textW);
-          doc.text(descLines.slice(0, 2), textX, textY);
-          textY += descLines.slice(0, 2).length * 3;
-        }
-
-        textY += 3;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(37, 99, 235);
-        doc.text(formatPrice(item.price), textX, textY);
-
-        col++;
-        if (col >= colCount) {
+      for (const [categoryName, groupItems] of sortedGroups) {
+        // If mid-row, flush to next row
+        if (col > 0) {
           col = 0;
           y += cardH + gap;
         }
+
+        // Ensure space for header + at least one card row
+        if (y + categoryHeaderH + cardH > pageH - margin - 8) {
+          doc.addPage();
+          y = margin;
+        }
+
+        // Category section header
+        doc.setFillColor(239, 246, 255); // blue-50
+        doc.setDrawColor(191, 219, 254); // blue-200
+        doc.roundedRect(
+          margin,
+          y,
+          pageW - margin * 2,
+          categoryHeaderH,
+          2,
+          2,
+          "FD",
+        );
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(37, 99, 235);
+        doc.text(categoryName, margin + 4, y + 6.5);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text(
+          `${groupItems.length} item${groupItems.length !== 1 ? "s" : ""}`,
+          pageW - margin - 4,
+          y + 6.5,
+          { align: "right" },
+        );
+
+        y += categoryHeaderH + gap;
+
+        for (const item of groupItems) {
+          if (y + cardH > pageH - margin - 8) {
+            doc.addPage();
+            y = margin;
+            col = 0;
+          }
+
+          const x = margin + col * (cardW + gap);
+
+          // Card shell
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(229, 231, 235);
+          doc.roundedRect(x, y, cardW, cardH, 3, 3, "FD");
+
+          // Image area — object-cover: fill the area, crop overflow via clip
+          doc.setFillColor(249, 250, 251);
+          doc.rect(x, y, cardW, imageAreaH, "F");
+
+          if (item.image_url) {
+            try {
+              const imgData = await fetchImageAsDataUrl(item.image_url);
+              // Normalize orientation by drawing through a canvas (fixes EXIF flip/rotation)
+              const {
+                dataUrl: normalizedData,
+                w: natW,
+                h: natH,
+              } = await normalizeImageOrientation(imgData);
+              // cover: scale up until both dimensions fill the area
+              const scale = Math.max(cardW / natW, imageAreaH / natH);
+              const drawW = natW * scale;
+              const drawH = natH * scale;
+              const drawX = x + (cardW - drawW) / 2;
+              const drawY = y + (imageAreaH - drawH) / 2;
+              // clip to the image area so overflow is hidden
+              doc.saveGraphicsState();
+              doc.rect(x, y, cardW, imageAreaH, null); // defines clip path only
+              doc.clip();
+              doc.discardPath();
+              doc.addImage(normalizedData, "PNG", drawX, drawY, drawW, drawH);
+              doc.restoreGraphicsState();
+            } catch {
+              drawImagePlaceholder(doc, x, y, cardW, imageAreaH);
+            }
+          } else {
+            drawImagePlaceholder(doc, x, y, cardW, imageAreaH);
+          }
+
+          const textX = x + 3;
+          const textW = cardW - 6;
+          let textY = y + imageAreaH + 5;
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(8);
+          doc.setTextColor(17, 24, 39);
+          const nameLines = doc.splitTextToSize(item.name, textW);
+          doc.text(nameLines.slice(0, 2), textX, textY);
+          textY += nameLines.slice(0, 2).length * 3.5;
+
+          if (item.description) {
+            textY += 2;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(6.5);
+            doc.setTextColor(107, 114, 128);
+            const descLines = doc.splitTextToSize(item.description, textW);
+            doc.text(descLines.slice(0, 2), textX, textY);
+            textY += descLines.slice(0, 2).length * 3;
+          }
+
+          textY += 3;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          doc.setTextColor(37, 99, 235);
+          doc.text(formatPrice(item.price), textX, textY);
+
+          col++;
+          if (col >= colCount) {
+            col = 0;
+            y += cardH + gap;
+          }
+        }
+
+        // After group, add spacing before next category header
+        if (col > 0) {
+          col = 0;
+          y += cardH + gap;
+        }
+        y += 4;
       }
 
       // Footer on last page
@@ -211,16 +266,31 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   });
 }
 
-function getImageFormatFromDataUrl(dataUrl: string): "JPEG" | "PNG" {
-  return dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
-}
-
-function getImageDimensions(
+/**
+ * Draws the image through a canvas so the browser applies EXIF orientation,
+ * then returns a PNG data URL with corrected orientation and the display dimensions.
+ */
+function normalizeImageOrientation(
   dataUrl: string,
-): Promise<{ w: number; h: number }> {
+): Promise<{ dataUrl: string; w: number; h: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas context unavailable"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      resolve({
+        dataUrl: canvas.toDataURL("image/png"),
+        w: img.naturalWidth,
+        h: img.naturalHeight,
+      });
+    };
     img.onerror = reject;
     img.src = dataUrl;
   });
