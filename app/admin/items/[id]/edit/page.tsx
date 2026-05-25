@@ -9,7 +9,7 @@ import { ItemForm, type ItemFormValues } from "@/components/admin/ItemForm";
 import { Button } from "@/components/ui/button";
 import type { Category, Item } from "@/lib/types";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 export default function EditItemPage() {
