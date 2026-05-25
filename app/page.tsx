@@ -7,7 +7,7 @@ import { ItemCard } from "@/components/catalog/ItemCard";
 import { Input } from "@/components/ui/input";
 import type { Category, Item } from "@/lib/types";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -17,6 +17,7 @@ export default function HomePage() {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadCatalog() {
@@ -58,12 +59,44 @@ export default function HomePage() {
     return items.filter((item) => selectedSet.has(item.id));
   }, [items, selectedItemIds]);
 
+  const filteredSelectionState = useMemo(() => {
+    const selectedSet = new Set(selectedItemIds);
+    const selectedCount = filteredItems.filter((item) =>
+      selectedSet.has(item.id),
+    ).length;
+    const allSelected =
+      filteredItems.length > 0 && selectedCount === filteredItems.length;
+    return {
+      selectedCount,
+      allSelected,
+      someSelected: selectedCount > 0 && !allSelected,
+    };
+  }, [filteredItems, selectedItemIds]);
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = filteredSelectionState.someSelected;
+    }
+  }, [filteredSelectionState.someSelected]);
+
   function toggleSelected(itemId: string) {
     setSelectedItemIds((current) =>
       current.includes(itemId)
         ? current.filter((id) => id !== itemId)
         : [...current, itemId],
     );
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    setSelectedItemIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        filteredItems.forEach((item) => next.add(item.id));
+      } else {
+        filteredItems.forEach((item) => next.delete(item.id));
+      }
+      return Array.from(next);
+    });
   }
 
   return (
@@ -97,6 +130,17 @@ export default function HomePage() {
             selected={selectedCategory}
             onChange={setSelectedCategory}
           />
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+            <input
+              ref={selectAllRef}
+              data-testid="select-all-visible"
+              type="checkbox"
+              checked={filteredSelectionState.allSelected}
+              onChange={(event) => toggleSelectAll(event.target.checked)}
+              disabled={filteredItems.length === 0}
+            />
+            Select all visible
+          </label>
         </div>
         <div className="space-y-2 md:text-right">
           <p className="text-sm text-gray-600">
