@@ -5,8 +5,8 @@ import sharp from "sharp";
 
 export const runtime = "nodejs";
 
-// Longest-edge sizes, generated at ~2x the on-screen display size for retina.
-const CATALOG_MAX = 600; // displayed ~300px on the catalog / used in the PDF
+// Longest-edge sizes (px). Catalog image is kept small to keep PDF exports light.
+const CATALOG_MAX = 300; // catalog page + embedded in the exported PDF
 const THUMB_MAX = 80; // displayed ~40px in the admin items table
 
 const bucketName = "item-images";

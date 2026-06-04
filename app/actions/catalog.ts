@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { categories, items, settings } from "@/lib/db/schema";
+import { deleteItemImages } from "@/lib/storage";
 import type { Category, Item } from "@/lib/types";
 import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -230,7 +231,15 @@ export async function updateItemAction(id: string, input: ItemInput) {
 
 export async function deleteItemAction(id: string) {
   await requireAuth();
+
+  const [item] = await db
+    .select({ imageUrl: items.imageUrl, thumbnailUrl: items.thumbnailUrl })
+    .from(items)
+    .where(eq(items.id, id));
+
   await db.delete(items).where(eq(items.id, id));
+  await deleteItemImages(item?.imageUrl, item?.thumbnailUrl);
+
   revalidatePath("/");
   revalidatePath("/admin/items");
 }
