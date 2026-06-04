@@ -2,7 +2,7 @@
 
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { categories, items } from "@/lib/db/schema";
+import { categories, items, settings } from "@/lib/db/schema";
 import type { Category, Item } from "@/lib/types";
 import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -121,6 +121,34 @@ export async function getItemByIdAction(id: string): Promise<Item | null> {
     .where(eq(items.id, id));
 
   return data ? mapItemRow(data) : null;
+}
+
+const DEFAULT_STORE_NAME = "Supermarket Catalog";
+
+export async function getSettingsAction(): Promise<{ store_name: string }> {
+  const [row] = await db.select().from(settings).limit(1);
+  return { store_name: row?.storeName ?? DEFAULT_STORE_NAME };
+}
+
+export async function updateSettingsAction(storeName: string) {
+  await requireAuth();
+  const trimmed = storeName.trim();
+  if (!trimmed) return { error: "Store name is required" };
+
+  const [existing] = await db.select({ id: settings.id }).from(settings).limit(1);
+
+  if (existing) {
+    await db
+      .update(settings)
+      .set({ storeName: trimmed, updatedAt: new Date() })
+      .where(eq(settings.id, existing.id));
+  } else {
+    await db.insert(settings).values({ storeName: trimmed });
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin/settings");
+  return { data: { store_name: trimmed } };
 }
 
 export async function createCategoryAction(name: string) {

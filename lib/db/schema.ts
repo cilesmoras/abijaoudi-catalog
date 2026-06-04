@@ -36,6 +36,14 @@ export const items = pgTable("items", {
     .notNull(),
 });
 
+export const settings = pgTable("settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  storeName: text("store_name").notNull().default("Supermarket Catalog"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const categoriesRelations = relations(categories, ({ many }) => ({
   items: many(items),
 }));

@@ -9,12 +9,14 @@ import { useState } from "react";
 interface ExportButtonProps {
   items: Item[];
   categories: Category[];
+  storeName: string;
   disabled?: boolean;
 }
 
 export function ExportButton({
   items,
   categories,
+  storeName,
   disabled = false,
 }: ExportButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ export function ExportButton({
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("Product Catalog", pageW / 2, 13, { align: "center" });
+      doc.text(storeName, pageW / 2, 13, { align: "center" });
 
       const date = new Date().toLocaleDateString("en-US", {
         year: "numeric",
@@ -215,7 +217,12 @@ export function ExportButton({
         align: "center",
       });
 
-      doc.save(`catalog-${new Date().toISOString().slice(0, 10)}.pdf`);
+      const slug =
+        storeName
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "") || "catalog";
+      doc.save(`${slug}-${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (e) {
       console.error("PDF export failed", e);
     } finally {

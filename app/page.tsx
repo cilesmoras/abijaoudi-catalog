@@ -1,6 +1,10 @@
 "use client";
 
-import { getCategoriesAction, getItemsAction } from "@/app/actions/catalog";
+import {
+  getCategoriesAction,
+  getItemsAction,
+  getSettingsAction,
+} from "@/app/actions/catalog";
 import { CategoryFilter } from "@/components/catalog/CategoryFilter";
 import { ItemCard } from "@/components/catalog/ItemCard";
 import { Input } from "@/components/ui/input";
@@ -11,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [storeName, setStoreName] = useState("Supermarket Catalog");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -22,13 +27,16 @@ export default function HomePage() {
       setError(null);
 
       try {
-        const [itemsPayload, categoriesPayload] = await Promise.all([
-          getItemsAction(),
-          getCategoriesAction(),
-        ]);
+        const [itemsPayload, categoriesPayload, settingsPayload] =
+          await Promise.all([
+            getItemsAction(),
+            getCategoriesAction(),
+            getSettingsAction(),
+          ]);
 
         setItems(itemsPayload);
         setCategories(categoriesPayload);
+        setStoreName(settingsPayload.store_name);
       } catch {
         setError("Failed to load catalog data");
       } finally {
@@ -38,6 +46,10 @@ export default function HomePage() {
 
     void loadCatalog();
   }, []);
+
+  useEffect(() => {
+    document.title = storeName;
+  }, [storeName]);
 
   const filteredItems = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -56,7 +68,7 @@ export default function HomePage() {
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Supermarket Catalog
+            {storeName}
           </h1>
           <p className="mt-2 text-gray-600">Browse products in the catalog.</p>
         </div>

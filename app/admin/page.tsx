@@ -51,6 +51,20 @@ export default function AdminDashboardPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Store settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Set the name shown on the catalog and exported PDF.
+            </p>
+            <Button asChild>
+              <Link href="/admin/settings">Edit settings</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </section>
     </main>
   );

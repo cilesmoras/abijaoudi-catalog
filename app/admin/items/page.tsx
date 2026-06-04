@@ -4,6 +4,7 @@ import {
   deleteItemAction,
   getCategoriesAction,
   getItemsAction,
+  getSettingsAction,
 } from "@/app/actions/catalog";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { ExportButton } from "@/components/catalog/ExportButton";
@@ -16,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 export default function AdminItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [storeName, setStoreName] = useState("Supermarket Catalog");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,12 +29,15 @@ export default function AdminItemsPage() {
       setError(null);
 
       try {
-        const [itemsPayload, categoriesPayload] = await Promise.all([
-          getItemsAction(),
-          getCategoriesAction(),
-        ]);
+        const [itemsPayload, categoriesPayload, settingsPayload] =
+          await Promise.all([
+            getItemsAction(),
+            getCategoriesAction(),
+            getSettingsAction(),
+          ]);
         setItems(itemsPayload);
         setCategories(categoriesPayload);
+        setStoreName(settingsPayload.store_name);
       } catch {
         setLoading(false);
         setError("Failed to load items");
@@ -111,6 +116,7 @@ export default function AdminItemsPage() {
           <ExportButton
             items={selectedItems}
             categories={categories}
+            storeName={storeName}
             disabled={selectedItems.length === 0}
           />
           <Button variant="outline" asChild>
