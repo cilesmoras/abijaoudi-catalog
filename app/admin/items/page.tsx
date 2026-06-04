@@ -1,16 +1,25 @@
 "use client";
 
-import { deleteItemAction, getItemsAction } from "@/app/actions/catalog";
+import {
+  deleteItemAction,
+  getCategoriesAction,
+  getItemsAction,
+} from "@/app/actions/catalog";
+import { LogoutButton } from "@/components/admin/LogoutButton";
+import { ExportButton } from "@/components/catalog/ExportButton";
 import { Button } from "@/components/ui/button";
-import type { Item } from "@/lib/types";
+import type { Category, Item } from "@/lib/types";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function AdminItemsPage() {
   const [items, setItems] = useState<Item[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadItems() {
@@ -18,8 +27,12 @@ export default function AdminItemsPage() {
       setError(null);
 
       try {
-        const payload = await getItemsAction();
-        setItems(payload);
+        const [itemsPayload, categoriesPayload] = await Promise.all([
+          getItemsAction(),
+          getCategoriesAction(),
+        ]);
+        setItems(itemsPayload);
+        setCategories(categoriesPayload);
       } catch {
         setLoading(false);
         setError("Failed to load items");
@@ -30,6 +43,41 @@ export default function AdminItemsPage() {
 
     void loadItems();
   }, []);
+
+  const selectedItems = useMemo(() => {
+    const selectedSet = new Set(selectedItemIds);
+    return items.filter((item) => selectedSet.has(item.id));
+  }, [items, selectedItemIds]);
+
+  const selectionState = useMemo(() => {
+    const selectedSet = new Set(selectedItemIds);
+    const selectedCount = items.filter((item) =>
+      selectedSet.has(item.id),
+    ).length;
+    const allSelected = items.length > 0 && selectedCount === items.length;
+    return {
+      allSelected,
+      someSelected: selectedCount > 0 && !allSelected,
+    };
+  }, [items, selectedItemIds]);
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = selectionState.someSelected;
+    }
+  }, [selectionState.someSelected]);
+
+  function toggleSelected(itemId: string) {
+    setSelectedItemIds((current) =>
+      current.includes(itemId)
+        ? current.filter((id) => id !== itemId)
+        : [...current, itemId],
+    );
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    setSelectedItemIds(checked ? items.map((item) => item.id) : []);
+  }
 
   async function handleDelete(itemId: string) {
     if (!window.confirm("Delete this item?")) {
@@ -44,6 +92,7 @@ export default function AdminItemsPage() {
     }
 
     setItems((current) => current.filter((item) => item.id !== itemId));
+    setSelectedItemIds((current) => current.filter((id) => id !== itemId));
   }
 
   return (
@@ -55,13 +104,22 @@ export default function AdminItemsPage() {
           </h1>
           <p className="text-gray-600">Manage catalog product records.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-gray-600">
+            {selectedItems.length} selected
+          </span>
+          <ExportButton
+            items={selectedItems}
+            categories={categories}
+            disabled={selectedItems.length === 0}
+          />
           <Button variant="outline" asChild>
             <Link href="/admin">Back</Link>
           </Button>
           <Button asChild>
             <Link href="/admin/items/new">New item</Link>
           </Button>
+          <LogoutButton />
         </div>
       </div>
 
@@ -74,6 +132,18 @@ export default function AdminItemsPage() {
             <table className="min-w-full divide-y">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-3 text-left">
+                    <input
+                      ref={selectAllRef}
+                      data-testid="select-all"
+                      type="checkbox"
+                      checked={selectionState.allSelected}
+                      onChange={(event) =>
+                        toggleSelectAll(event.target.checked)
+                      }
+                      disabled={items.length === 0}
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                     Photo
                   </th>
@@ -95,9 +165,18 @@ export default function AdminItemsPage() {
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td className="px-4 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedItemIds.includes(item.id)}
+                        onChange={() => toggleSelected(item.id)}
+                      />
+                    </td>
+                    <td className="px-4 py-2">
                       <div className="relative h-10 w-10 overflow-hidden rounded-md bg-gray-100">
                         <img
-                          src={getItemImageSrc(item.image_url)}
+                          src={getItemImageSrc(
+                            item.thumbnail_url ?? item.image_url,
+                          )}
                           alt={item.name}
                           className="h-full w-full object-cover"
                         />

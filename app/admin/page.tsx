@@ -1,3 +1,4 @@
+import { LogoutButton } from "@/components/admin/LogoutButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -14,9 +15,12 @@ export default function AdminDashboardPage() {
             Manage products and categories for the public catalog.
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/">Back to catalog</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/">Back to catalog</Link>
+          </Button>
+          <LogoutButton />
+        </div>
       </div>
 
       <section className="mt-8 grid gap-5 md:grid-cols-2">

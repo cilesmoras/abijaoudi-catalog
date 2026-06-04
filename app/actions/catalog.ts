@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { categories, items } from "@/lib/db/schema";
 import type { Category, Item } from "@/lib/types";
@@ -12,6 +13,7 @@ export type ItemInput = {
   price: number;
   category_id: string | null;
   image_url: string | null;
+  thumbnail_url: string | null;
 };
 
 function toIsoString(value: string | Date) {
@@ -41,6 +43,7 @@ function mapItemRow(row: {
   description: string | null;
   price: number;
   image_url: string | null;
+  thumbnail_url: string | null;
   created_at: Date | string;
   categories: {
     id: string;
@@ -55,6 +58,7 @@ function mapItemRow(row: {
     description: row.description,
     price: row.price,
     image_url: row.image_url,
+    thumbnail_url: row.thumbnail_url,
     created_at: toIsoString(row.created_at),
     categories: row.categories
       ? {
@@ -80,6 +84,7 @@ export async function getItemsAction(): Promise<Item[]> {
       description: items.description,
       price: items.price,
       image_url: items.imageUrl,
+      thumbnail_url: items.thumbnailUrl,
       created_at: items.createdAt,
       categories: {
         id: categories.id,
@@ -103,6 +108,7 @@ export async function getItemByIdAction(id: string): Promise<Item | null> {
       description: items.description,
       price: items.price,
       image_url: items.imageUrl,
+      thumbnail_url: items.thumbnailUrl,
       created_at: items.createdAt,
       categories: {
         id: categories.id,
@@ -118,6 +124,7 @@ export async function getItemByIdAction(id: string): Promise<Item | null> {
 }
 
 export async function createCategoryAction(name: string) {
+  await requireAuth();
   const trimmed = name.trim();
   if (!trimmed) return { error: "Name is required" };
 
@@ -137,6 +144,7 @@ export async function createCategoryAction(name: string) {
 }
 
 export async function deleteCategoryAction(id: string) {
+  await requireAuth();
   await db.delete(categories).where(eq(categories.id, id));
   revalidatePath("/");
   revalidatePath("/admin/categories");
@@ -144,6 +152,7 @@ export async function deleteCategoryAction(id: string) {
 }
 
 export async function createItemAction(input: ItemInput) {
+  await requireAuth();
   if (!input.name?.trim() || input.price === undefined || !input.category_id) {
     return { error: "Name, price, and category are required" };
   }
@@ -156,6 +165,7 @@ export async function createItemAction(input: ItemInput) {
       price: Number(input.price),
       categoryId: input.category_id,
       imageUrl: input.image_url,
+      thumbnailUrl: input.thumbnail_url,
     })
     .returning({ id: items.id });
 
@@ -165,6 +175,7 @@ export async function createItemAction(input: ItemInput) {
 }
 
 export async function updateItemAction(id: string, input: ItemInput) {
+  await requireAuth();
   if (!input.name?.trim() || input.price === undefined || !input.category_id) {
     return { error: "Name, price, and category are required" };
   }
@@ -177,6 +188,7 @@ export async function updateItemAction(id: string, input: ItemInput) {
       price: Number(input.price),
       categoryId: input.category_id,
       imageUrl: input.image_url,
+      thumbnailUrl: input.thumbnail_url,
     })
     .where(eq(items.id, id))
     .returning({ id: items.id });
@@ -189,6 +201,7 @@ export async function updateItemAction(id: string, input: ItemInput) {
 }
 
 export async function deleteItemAction(id: string) {
+  await requireAuth();
   await db.delete(items).where(eq(items.id, id));
   revalidatePath("/");
   revalidatePath("/admin/items");

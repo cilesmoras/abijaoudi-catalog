@@ -21,6 +21,7 @@ export type ItemFormValues = {
   price: number;
   category_id: string | null;
   image_url: string | null;
+  thumbnail_url: string | null;
 };
 
 interface ItemFormProps {
@@ -49,6 +50,9 @@ export function ItemForm({
     initialValues?.category_id ?? EMPTY_CATEGORY,
   );
   const [imageUrl, setImageUrl] = useState(initialValues?.image_url ?? "");
+  const [thumbnailUrl, setThumbnailUrl] = useState(
+    initialValues?.thumbnail_url ?? "",
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -96,8 +100,11 @@ export function ItemForm({
       return { error: payload?.error ?? "Image upload failed" } as const;
     }
 
-    const payload = (await response.json()) as { url: string };
-    return { url: payload.url } as const;
+    const payload = (await response.json()) as {
+      url: string;
+      thumbnailUrl: string;
+    };
+    return { url: payload.url, thumbnailUrl: payload.thumbnailUrl } as const;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -121,6 +128,7 @@ export function ItemForm({
     }
 
     let finalImageUrl = imageUrl.trim() ? imageUrl.trim() : null;
+    let finalThumbnailUrl = thumbnailUrl.trim() ? thumbnailUrl.trim() : null;
 
     if (selectedFile) {
       setUploadingImage(true);
@@ -131,7 +139,9 @@ export function ItemForm({
         return;
       }
       finalImageUrl = uploadResult.url;
+      finalThumbnailUrl = uploadResult.thumbnailUrl;
       setImageUrl(uploadResult.url);
+      setThumbnailUrl(uploadResult.thumbnailUrl);
       setSelectedFile(null);
       setPreviewUrl((current) => {
         if (current) URL.revokeObjectURL(current);
@@ -146,6 +156,7 @@ export function ItemForm({
       price: parsedPrice,
       category_id: categoryId,
       image_url: finalImageUrl,
+      thumbnail_url: finalThumbnailUrl,
     });
   }
 

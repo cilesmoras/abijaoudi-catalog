@@ -14,6 +14,7 @@ export type Item = {
   description: string | null;
   price: number;
   image_url: string | null;
+  thumbnail_url: string | null;
   created_at: string;
   categories?: ItemCategoryPreview | null;
 };

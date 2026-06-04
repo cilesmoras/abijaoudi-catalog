@@ -141,13 +141,10 @@ export function ExportButton({
 
           if (item.image_url) {
             try {
+              // Images are pre-sized, compressed, and EXIF-corrected on upload,
+              // so embed the JPEG bytes directly (no PNG re-encode = small PDF).
               const imgData = await fetchImageAsDataUrl(item.image_url);
-              // Normalize orientation by drawing through a canvas (fixes EXIF flip/rotation)
-              const {
-                dataUrl: normalizedData,
-                w: natW,
-                h: natH,
-              } = await normalizeImageOrientation(imgData);
+              const { w: natW, h: natH } = await getImageSize(imgData);
               // cover: scale up until both dimensions fill the area
               const scale = Math.max(cardW / natW, imageAreaH / natH);
               const drawW = natW * scale;
@@ -159,7 +156,7 @@ export function ExportButton({
               doc.rect(x, y, cardW, imageAreaH, null); // defines clip path only
               doc.clip();
               doc.discardPath();
-              doc.addImage(normalizedData, "PNG", drawX, drawY, drawW, drawH);
+              doc.addImage(imgData, "JPEG", drawX, drawY, drawW, drawH);
               doc.restoreGraphicsState();
             } catch {
               drawImagePlaceholder(doc, x, y, cardW, imageAreaH);
@@ -267,30 +264,13 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
 }
 
 /**
- * Draws the image through a canvas so the browser applies EXIF orientation,
- * then returns a PNG data URL with corrected orientation and the display dimensions.
+ * Reads an image's natural dimensions (needed for object-cover scaling) without
+ * re-encoding it. Orientation is already baked in by sharp at upload time.
  */
-function normalizeImageOrientation(
-  dataUrl: string,
-): Promise<{ dataUrl: string; w: number; h: number }> {
+function getImageSize(dataUrl: string): Promise<{ w: number; h: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("Canvas context unavailable"));
-        return;
-      }
-      ctx.drawImage(img, 0, 0);
-      resolve({
-        dataUrl: canvas.toDataURL("image/png"),
-        w: img.naturalWidth,
-        h: img.naturalHeight,
-      });
-    };
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
     img.onerror = reject;
     img.src = dataUrl;
   });

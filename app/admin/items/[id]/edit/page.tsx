@@ -105,6 +105,7 @@ export default function EditItemPage() {
             price: item.price,
             category_id: item.category_id,
             image_url: item.image_url,
+            thumbnail_url: item.thumbnail_url,
           }}
           submitLabel="Save changes"
           submitting={submitting}
