@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 88" width="340" height="88" role="img" aria-label="Supermarket Catalog">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b74ff"/>
+      <stop offset="1" stop-color="#1e50c8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Mark -->
+  <g transform="translate(0,12)">
+    <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+    <g transform="translate(32,32) scale(0.25) translate(-256,-296)">
+      <path d="M216 250 C216 214 246 214 246 250" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+      <path d="M266 250 C266 214 296 214 296 250" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+      <path d="M202 250 L310 250 L331 356 Q331 378 309 378 L203 378 Q181 378 181 356 Z" fill="#ffffff"/>
+      <rect x="214" y="290" width="84" height="14" rx="7" fill="#1e50c8"/>
+      <rect x="214" y="318" width="84" height="14" rx="7" fill="#1e50c8"/>
+      <rect x="214" y="346" width="52" height="14" rx="7" fill="#3b74ff"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="84" y="52" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#1e50c8">Catalog</text>
+  <text x="84" y="72" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="500" letter-spacing="2" fill="#6b7280">SUPERMARKET</text>
+</svg>

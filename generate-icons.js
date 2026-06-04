@@ -1,61 +1,63 @@
-const zlib = require("zlib");
+// Generates every app icon from public/icon.svg (the single source of truth).
+// Run: node generate-icons.js
+//
+// Produces:
+//   public/icon-192x192.png, public/icon-512x512.png  (PWA manifest, maskable)
+//   app/icon.svg                                       (scalable favicon)
+//   app/apple-icon.png                                 (iOS home-screen icon)
+//   app/favicon.ico                                    (legacy 16/32/48 favicon)
 const fs = require("fs");
 const path = require("path");
-
-const crcTable = new Uint32Array(256);
-for (let i = 0; i < 256; i++) {
-  let c = i;
-  for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  crcTable[i] = c;
-}
-
-function crc32(buf) {
-  let c = 0xffffffff;
-  for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
-
-function chunk(type, data) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const tb = Buffer.from(type, "ascii");
-  const cr = Buffer.alloc(4);
-  cr.writeUInt32BE(crc32(Buffer.concat([tb, data])));
-  return Buffer.concat([len, tb, data, cr]);
-}
-
-function createSolidPNG(size, r, g, b) {
-  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 2; // RGB color type
-  const row = Buffer.alloc(1 + size * 3);
-  row[0] = 0; // None filter
-  for (let x = 0; x < size; x++) {
-    row[1 + x * 3] = r;
-    row[2 + x * 3] = g;
-    row[3 + x * 3] = b;
-  }
-  const rows = Array.from({ length: size }, () => Buffer.from(row));
-  const raw = Buffer.concat(rows);
-  const compressed = zlib.deflateSync(raw);
-  return Buffer.concat([
-    sig,
-    chunk("IHDR", ihdr),
-    chunk("IDAT", compressed),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
-}
+const sharp = require("sharp");
 
 const publicDir = path.join(__dirname, "public");
-fs.writeFileSync(
-  path.join(publicDir, "icon-192x192.png"),
-  createSolidPNG(192, 30, 80, 200),
-);
-fs.writeFileSync(
-  path.join(publicDir, "icon-512x512.png"),
-  createSolidPNG(512, 30, 80, 200),
-);
-console.log("PWA icons created successfully.");
+const appDir = path.join(__dirname, "app");
+const svgPath = path.join(publicDir, "icon.svg");
+const svg = fs.readFileSync(svgPath);
+
+const render = (size) =>
+  sharp(svg, { density: 300 }).resize(size, size).png();
+
+function icoFromPngs(pngs) {
+  const count = pngs.length;
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(1, 2); // type = icon
+  header.writeUInt16LE(count, 4);
+  const dir = Buffer.alloc(16 * count);
+  let offset = 6 + 16 * count;
+  pngs.forEach((p, i) => {
+    const e = i * 16;
+    dir[e] = p.size >= 256 ? 0 : p.size; // width
+    dir[e + 1] = p.size >= 256 ? 0 : p.size; // height
+    dir.writeUInt16LE(1, e + 4); // color planes
+    dir.writeUInt16LE(32, e + 6); // bits per pixel
+    dir.writeUInt32LE(p.buf.length, e + 8); // image size
+    dir.writeUInt32LE(offset, e + 12); // image offset
+    offset += p.buf.length;
+  });
+  return Buffer.concat([header, dir, ...pngs.map((p) => p.buf)]);
+}
+
+(async () => {
+  // PWA manifest icons (maskable)
+  await render(192).toFile(path.join(publicDir, "icon-192x192.png"));
+  await render(512).toFile(path.join(publicDir, "icon-512x512.png"));
+
+  // Scalable favicon for modern browsers (Next App Router file convention)
+  fs.copyFileSync(svgPath, path.join(appDir, "icon.svg"));
+
+  // Apple touch icon (opaque; iOS applies its own rounded mask)
+  await render(180).toFile(path.join(appDir, "apple-icon.png"));
+
+  // Legacy multi-size favicon.ico
+  const pngs = [];
+  for (const size of [16, 32, 48]) {
+    pngs.push({ size, buf: await render(size).toBuffer() });
+  }
+  fs.writeFileSync(path.join(appDir, "favicon.ico"), icoFromPngs(pngs));
+
+  console.log("Icons generated successfully.");
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
