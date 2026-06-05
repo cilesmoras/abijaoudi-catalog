@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [storeName, setStoreName] = useState("Supermarket Catalog");
+  const [storeName, setStoreName] = useState("Products Catalog");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);

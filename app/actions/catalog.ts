@@ -124,7 +124,7 @@ export async function getItemByIdAction(id: string): Promise<Item | null> {
   return data ? mapItemRow(data) : null;
 }
 
-const DEFAULT_STORE_NAME = "Supermarket Catalog";
+const DEFAULT_STORE_NAME = "Products Catalog";
 
 export async function getSettingsAction(): Promise<{ store_name: string }> {
   const [row] = await db.select().from(settings).limit(1);
@@ -136,7 +136,10 @@ export async function updateSettingsAction(storeName: string) {
   const trimmed = storeName.trim();
   if (!trimmed) return { error: "Store name is required" };
 
-  const [existing] = await db.select({ id: settings.id }).from(settings).limit(1);
+  const [existing] = await db
+    .select({ id: settings.id })
+    .from(settings)
+    .limit(1);
 
   if (existing) {
     await db
