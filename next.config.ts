@@ -5,7 +5,6 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
   : "";
 
 const nextConfig: NextConfig = {
-  deploymentId: process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
   images: {
     remotePatterns: supabaseHostname
       ? [
