@@ -1,6 +1,5 @@
 "use client";
 
-import { loginAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,10 +19,18 @@ function LoginForm() {
     setSubmitting(true);
     setError(null);
 
-    const result = await loginAction(username, password);
-    if ("error" in result) {
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
       setSubmitting(false);
-      setError(result.error ?? "Login failed");
+      setError(result?.error ?? "Login failed");
       return;
     }
 
