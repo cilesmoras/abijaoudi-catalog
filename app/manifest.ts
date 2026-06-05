@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Supermarket Catalog",
-    short_name: "Catalog",
+    name: "Cataloo",
+    short_name: "Cataloo",
     description: "Manage and export your supermarket product catalog.",
     start_url: "/",
     display: "standalone",

@@ -9,7 +9,7 @@ export default function AdminDashboardPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Catalog Admin
+            Cataloo Admin
           </h1>
           <p className="mt-2 text-gray-600">
             Manage products and categories for the public catalog.

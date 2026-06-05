@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 88" width="340" height="88" role="img" aria-label="Supermarket Catalog">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 88" width="340" height="88" role="img" aria-label="Cataloo">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#3b74ff"/>
@@ -20,6 +20,6 @@
   </g>
 
   <!-- Wordmark -->
-  <text x="84" y="52" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#1e50c8">Catalog</text>
+  <text x="84" y="52" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#1e50c8">Cataloo</text>
   <text x="84" y="72" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="500" letter-spacing="2" fill="#6b7280">SUPERMARKET</text>
 </svg>

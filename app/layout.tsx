@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Supermarket Catalog",
+  title: "Cataloo",
   description: "Manage and export your supermarket product catalog.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Catalog",
+    title: "Cataloo",
   },
 };
 
