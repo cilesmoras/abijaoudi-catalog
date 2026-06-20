@@ -1,55 +1,52 @@
-import { isAuthenticated } from "@/lib/auth";
+import { NextRequest } from "next/server";
+import { and, eq } from "drizzle-orm";
+import { getCurrentProfile } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
-import { asc } from "drizzle-orm";
-import { NextRequest } from "next/server";
+import { getCategoriesForOwner, mapCategoryRow, slugify } from "@/lib/queries";
 
 export const runtime = "nodejs";
 
-function toIsoString(value: string | Date) {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
-}
-
 export async function GET() {
-  const data = await db.select().from(categories).orderBy(asc(categories.name));
-  return Response.json(
-    data.map((row) => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      created_at: toIsoString(row.createdAt),
-    })),
-  );
+  const profile = await getCurrentProfile();
+  if (!profile) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return Response.json(await getCategoriesForOwner(profile.id));
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await isAuthenticated())) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();
-  const { name } = body;
-
-  if (!name)
+  const name: string = body?.name?.trim();
+  if (!name) {
     return Response.json({ error: "Name is required" }, { status: 400 });
+  }
 
-  const slug = name
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+  const slug = slugify(name);
+
+  // Slug uniqueness is per-owner.
+  const [existing] = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.ownerId, profile.id), eq(categories.slug, slug)))
+    .limit(1);
+
+  if (existing) {
+    return Response.json(
+      { error: "A category with that name already exists" },
+      { status: 409 },
+    );
+  }
 
   const [created] = await db
     .insert(categories)
-    .values({ name, slug })
+    .values({ ownerId: profile.id, name, slug })
     .returning();
 
-  return Response.json(
-    {
-      id: created.id,
-      name: created.name,
-      slug: created.slug,
-      created_at: toIsoString(created.createdAt),
-    },
-    { status: 201 },
-  );
+  return Response.json(mapCategoryRow(created), { status: 201 });
 }

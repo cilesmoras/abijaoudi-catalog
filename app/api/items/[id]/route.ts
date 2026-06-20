@@ -1,87 +1,34 @@
-import { isAuthenticated } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { categories, items } from "@/lib/db/schema";
-import { deleteItemImages } from "@/lib/storage";
-import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
+import { and, eq } from "drizzle-orm";
+import { getCurrentProfile } from "@/lib/dal";
+import { db } from "@/lib/db";
+import { items } from "@/lib/db/schema";
+import { deleteItemImages } from "@/lib/storage";
+import { categoryBelongsToOwner, getItemForOwner } from "@/lib/queries";
 
 export const runtime = "nodejs";
-
-function toIsoString(value: string | Date) {
-  return value instanceof Date
-    ? value.toISOString()
-    : new Date(value).toISOString();
-}
-
-function mapItemRow(row: {
-  id: string;
-  category_id: string | null;
-  name: string;
-  description: string | null;
-  price: number;
-  image_url: string | null;
-  thumbnail_url: string | null;
-  created_at: Date | string;
-  categories: {
-    id: string | null;
-    name: string | null;
-    slug: string | null;
-  } | null;
-}) {
-  return {
-    id: row.id,
-    category_id: row.category_id,
-    name: row.name,
-    description: row.description,
-    price: row.price,
-    image_url: row.image_url,
-    thumbnail_url: row.thumbnail_url,
-    created_at: toIsoString(row.created_at),
-    categories: row.categories?.id
-      ? {
-          id: row.categories.id,
-          name: row.categories.name!,
-          slug: row.categories.slug!,
-        }
-      : null,
-  };
-}
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
-
-  const [data] = await db
-    .select({
-      id: items.id,
-      category_id: items.categoryId,
-      name: items.name,
-      description: items.description,
-      price: items.price,
-      image_url: items.imageUrl,
-      thumbnail_url: items.thumbnailUrl,
-      created_at: items.createdAt,
-      categories: {
-        id: categories.id,
-        name: categories.name,
-        slug: categories.slug,
-      },
-    })
-    .from(items)
-    .leftJoin(categories, eq(items.categoryId, categories.id))
-    .where(eq(items.id, id));
-
-  if (!data) return Response.json({ error: "Item not found" }, { status: 404 });
-  return Response.json(mapItemRow(data));
+  const item = await getItemForOwner(profile.id, id);
+  if (!item) return Response.json({ error: "Item not found" }, { status: 404 });
+  return Response.json(item);
 }
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAuthenticated())) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -89,6 +36,10 @@ export async function PUT(
   const body = await request.json();
   const { name, description, price, category_id, image_url, thumbnail_url } =
     body;
+
+  if (category_id && !(await categoryBelongsToOwner(profile.id, category_id))) {
+    return Response.json({ error: "Invalid category" }, { status: 400 });
+  }
 
   const [updated] = await db
     .update(items)
@@ -100,41 +51,52 @@ export async function PUT(
       imageUrl: image_url || null,
       thumbnailUrl: thumbnail_url || null,
     })
-    .where(eq(items.id, id))
+    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)))
     .returning({ id: items.id });
 
   if (!updated)
     return Response.json({ error: "Item not found" }, { status: 404 });
 
-  const [data] = await db
-    .select({
-      id: items.id,
-      category_id: items.categoryId,
-      name: items.name,
-      description: items.description,
-      price: items.price,
-      image_url: items.imageUrl,
-      thumbnail_url: items.thumbnailUrl,
-      created_at: items.createdAt,
-      categories: {
-        id: categories.id,
-        name: categories.name,
-        slug: categories.slug,
-      },
-    })
-    .from(items)
-    .leftJoin(categories, eq(items.categoryId, categories.id))
-    .where(eq(items.id, id));
+  const item = await getItemForOwner(profile.id, id);
+  return Response.json(item);
+}
 
-  if (!data) return Response.json({ error: "Item not found" }, { status: 404 });
-  return Response.json(mapItemRow(data));
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const body = await request.json();
+  const { hidden } = body;
+
+  if (typeof hidden !== "boolean") {
+    return Response.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const [updated] = await db
+    .update(items)
+    .set({ hidden })
+    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)))
+    .returning({ id: items.id });
+
+  if (!updated)
+    return Response.json({ error: "Item not found" }, { status: 404 });
+
+  const item = await getItemForOwner(profile.id, id);
+  return Response.json(item);
 }
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAuthenticated())) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -143,10 +105,16 @@ export async function DELETE(
   const [item] = await db
     .select({ imageUrl: items.imageUrl, thumbnailUrl: items.thumbnailUrl })
     .from(items)
-    .where(eq(items.id, id));
+    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
 
-  await db.delete(items).where(eq(items.id, id));
-  await deleteItemImages(item?.imageUrl, item?.thumbnailUrl);
+  if (!item) {
+    return Response.json({ error: "Item not found" }, { status: 404 });
+  }
+
+  await db
+    .delete(items)
+    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+  await deleteItemImages(item.imageUrl, item.thumbnailUrl);
 
   return Response.json({ success: true });
 }

@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { createCategory } from "@/lib/api-client";
 import type { Category } from "@/lib/types";
 import { getItemImageSrc } from "@/lib/utils";
 import { FormEvent, useEffect, useState } from "react";
@@ -49,6 +50,10 @@ export function ItemForm({
   const [categoryId, setCategoryId] = useState(
     initialValues?.category_id ?? EMPTY_CATEGORY,
   );
+  const [createdCategories, setCreatedCategories] = useState<Category[]>([]);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const [imageUrl, setImageUrl] = useState(initialValues?.image_url ?? "");
   const [thumbnailUrl, setThumbnailUrl] = useState(
     initialValues?.thumbnail_url ?? "",
@@ -71,6 +76,14 @@ export function ItemForm({
   //   });
   // }, [initialValues]);
 
+  // Categories load asynchronously in the parent; merge in any created from
+  // within this form so a just-added category isn't dropped on re-render.
+  const seenCategoryIds = new Set(categories.map((category) => category.id));
+  const categoryOptions = [
+    ...categories,
+    ...createdCategories.filter((category) => !seenCategoryIds.has(category.id)),
+  ];
+
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -78,6 +91,32 @@ export function ItemForm({
       }
     };
   }, [previewUrl]);
+
+  async function handleCreateCategory() {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) {
+      setError("Category name is required");
+      return;
+    }
+
+    setCreatingCategory(true);
+    setError(null);
+    try {
+      const created = await createCategory(trimmed);
+      setCreatedCategories((current) =>
+        current.some((category) => category.id === created.id)
+          ? current
+          : [...current, created],
+      );
+      setCategoryId(created.id);
+      setNewCategoryName("");
+      setShowNewCategory(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create category");
+    } finally {
+      setCreatingCategory(false);
+    }
+  }
 
   async function uploadImage(file: File) {
     const formData = new FormData();
@@ -211,13 +250,59 @@ export function ItemForm({
             <SelectItem value={EMPTY_CATEGORY} disabled>
               Select a category
             </SelectItem>
-            {categories.map((category) => (
+            {categoryOptions.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        {showNewCategory ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={newCategoryName}
+              onChange={(event) => setNewCategoryName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleCreateCategory();
+                }
+              }}
+              placeholder="New category name"
+              autoFocus
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCreateCategory}
+              disabled={creatingCategory}
+            >
+              {creatingCategory ? "Adding…" : "Add"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setShowNewCategory(false);
+                setNewCategoryName("");
+              }}
+              disabled={creatingCategory}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setShowNewCategory(true)}
+          >
+            + New category
+          </Button>
+        )}
       </div>
 
       <div className="space-y-2">

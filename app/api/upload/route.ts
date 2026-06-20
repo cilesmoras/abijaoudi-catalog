@@ -1,7 +1,7 @@
-import { isAuthenticated } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import sharp from "sharp";
+import { getCurrentProfile } from "@/lib/dal";
 
 export const runtime = "nodejs";
 
@@ -12,7 +12,8 @@ const THUMB_MAX = 80; // displayed ~40px in the admin items table
 const bucketName = "item-images";
 
 export async function POST(request: NextRequest) {
-  if (!(await isAuthenticated())) {
+  const profile = await getCurrentProfile();
+  if (!profile) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -88,7 +89,8 @@ export async function POST(request: NextRequest) {
     return { url: urlData.publicUrl } as const;
   }
 
-  const base = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  // Namespace uploads per owner so tenants are isolated within the bucket.
+  const base = `${profile.id}/${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const catalogUpload = await uploadJpeg(`${base}-cat.jpg`, catalogBuffer);
   if ("error" in catalogUpload) {
