@@ -95,6 +95,7 @@ export function mapProfileRow(row: typeof profiles.$inferSelect): Profile {
     country: row.country,
     contact_email: row.contactEmail,
     address: row.address,
+    currency: row.currency,
     offers_delivery: row.offersDelivery,
     offers_pickup: row.offersPickup,
     delivery_payment_upfront: row.deliveryPaymentUpfront,

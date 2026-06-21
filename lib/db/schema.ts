@@ -20,6 +20,7 @@ export const profiles = pgTable("profiles", {
   country: text("country"),
   contactEmail: text("contact_email"),
   address: text("address"),
+  currency: text("currency"),
   offersDelivery: boolean("offers_delivery").notNull().default(false),
   offersPickup: boolean("offers_pickup").notNull().default(false),
   deliveryPaymentUpfront: boolean("delivery_payment_upfront")

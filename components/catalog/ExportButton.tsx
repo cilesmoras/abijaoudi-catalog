@@ -10,6 +10,7 @@ interface ExportButtonProps {
   items: Item[];
   categories: Category[];
   storeName: string;
+  currency: string | null;
   disabled?: boolean;
 }
 
@@ -17,6 +18,7 @@ export function ExportButton({
   items,
   categories,
   storeName,
+  currency,
   disabled = false,
 }: ExportButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -192,7 +194,7 @@ export function ExportButton({
           doc.setFont("helvetica", "bold");
           doc.setFontSize(9);
           doc.setTextColor(37, 99, 235);
-          doc.text(formatPrice(item.price), textX, textY);
+          doc.text(formatPrice(item.price, currency), textX, textY);
 
           col++;
           if (col >= colCount) {

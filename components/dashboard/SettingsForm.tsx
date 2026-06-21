@@ -43,6 +43,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
           country: profile.country ?? "",
           contact_email: profile.contact_email ?? "",
           address: profile.address ?? "",
+          currency: profile.currency ?? "",
           offers_delivery: profile.offers_delivery,
           offers_pickup: profile.offers_pickup,
           delivery_payment_upfront: profile.delivery_payment_upfront,

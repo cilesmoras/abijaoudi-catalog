@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
 import { normalizeHandle, validateHandle } from "@/lib/handles";
 import { isValidCountryCode } from "@/lib/countries";
+import { isValidCurrencyCode } from "@/lib/currencies";
 import { mapProfileRow } from "@/lib/queries";
 
 export const runtime = "nodejs";
@@ -16,6 +17,7 @@ type ProfileBody = {
   country?: string | null;
   contact_email?: string | null;
   address?: string | null;
+  currency?: string | null;
   offers_delivery?: boolean;
   offers_pickup?: boolean;
   delivery_payment_upfront?: boolean;
@@ -31,6 +33,10 @@ function cleanContact(value: unknown): string | null {
 
 function cleanCountry(value: unknown): string | null {
   return isValidCountryCode(value) ? (value as string).toUpperCase() : null;
+}
+
+function cleanCurrency(value: unknown): string | null {
+  return isValidCurrencyCode(value) ? value.toUpperCase() : null;
 }
 
 // A flat delivery fee is optional; treat blank / non-positive / invalid values
@@ -124,6 +130,7 @@ export async function POST(request: NextRequest) {
       country: cleanCountry(body.country),
       contactEmail: cleanContact(body.contact_email),
       address: cleanContact(body.address),
+      currency: cleanCurrency(body.currency),
       ...fulfillmentFields(body),
     })
     .returning();
@@ -162,6 +169,7 @@ export async function PUT(request: NextRequest) {
       country: cleanCountry(body.country),
       contactEmail: cleanContact(body.contact_email),
       address: cleanContact(body.address),
+      currency: cleanCurrency(body.currency),
       ...fulfillmentFields(body),
       updatedAt: new Date(),
     })

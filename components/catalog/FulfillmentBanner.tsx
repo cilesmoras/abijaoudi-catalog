@@ -10,7 +10,7 @@ export function FulfillmentBanner({ profile }: { profile: Profile }) {
 
   const feeLabel =
     profile.delivery_fee && profile.delivery_fee > 0
-      ? `${formatPrice(profile.delivery_fee)} delivery fee`
+      ? `${formatPrice(profile.delivery_fee, profile.currency)} delivery fee`
       : "Free delivery";
 
   return (

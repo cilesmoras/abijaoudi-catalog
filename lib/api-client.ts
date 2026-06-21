@@ -76,6 +76,7 @@ export type ProfileInput = {
   country: string | null;
   contact_email: string | null;
   address: string | null;
+  currency: string | null;
   offers_delivery: boolean;
   offers_pickup: boolean;
   delivery_payment_upfront: boolean;

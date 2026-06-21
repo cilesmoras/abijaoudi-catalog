@@ -7,7 +7,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price: number) {
+export function formatPrice(price: number, currency?: string | null) {
+  if (currency) {
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+        currencyDisplay: "narrowSymbol",
+      }).format(price);
+    } catch {
+      // Unknown currency code — fall through to a plain formatted number.
+    }
+  }
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

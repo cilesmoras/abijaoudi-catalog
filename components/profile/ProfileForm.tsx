@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CountryCombobox } from "@/components/ui/country-combobox";
+import { CurrencyCombobox } from "@/components/ui/currency-combobox";
 import { detectCountryCode } from "@/lib/countries";
 import type { ProfileInput } from "@/lib/api-client";
 
@@ -16,6 +17,7 @@ export type ProfileFormValues = {
   country: string;
   contact_email: string;
   address: string;
+  currency: string;
   offers_delivery: boolean;
   offers_pickup: boolean;
   delivery_payment_upfront: boolean;
@@ -44,6 +46,7 @@ export function ProfileForm({
     initialValues?.contact_email ?? "",
   );
   const [address, setAddress] = useState(initialValues?.address ?? "");
+  const [currency, setCurrency] = useState(initialValues?.currency ?? "");
   const [offersDelivery, setOffersDelivery] = useState(
     initialValues?.offers_delivery ?? false,
   );
@@ -84,6 +87,7 @@ export function ProfileForm({
         country: phone.trim() ? country || null : null,
         contact_email: contactEmail.trim() || null,
         address: address.trim() || null,
+        currency: currency || null,
         offers_delivery: offersDelivery,
         offers_pickup: offersPickup,
         delivery_payment_upfront: offersDelivery ? paymentUpfront : false,
@@ -174,6 +178,19 @@ export function ProfileForm({
           placeholder="123 Main St, Springfield"
           rows={2}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="currency">Currency</Label>
+        <CurrencyCombobox
+          id="currency"
+          value={currency}
+          onChange={setCurrency}
+        />
+        <p className="text-xs text-gray-500">
+          Shown with every price on your catalog. Leave unset to show plain
+          numbers.
+        </p>
       </div>
 
       <div className="space-y-3 rounded-md border p-4">

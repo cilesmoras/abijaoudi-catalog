@@ -72,14 +72,15 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
   function orderOnWhatsApp() {
     if (!phoneDigits || cartEntries.length === 0) return;
     const lines = cartEntries.map(
-      (e) => `• ${e.qty}x ${e.item.name} (${formatPrice(e.item.price)})`,
+      (e) =>
+        `• ${e.qty}x ${e.item.name} (${formatPrice(e.item.price, profile.currency)})`,
     );
     const message = [
       `Hi ${profile.catalog_name}, I'd like to order:`,
       "",
       ...lines,
       "",
-      `Total: ${formatPrice(totalPrice)}`,
+      `Total: ${formatPrice(totalPrice, profile.currency)}`,
     ].join("\n");
     const url = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
@@ -143,7 +144,7 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
                         </p>
                       ) : null}
                       <p className="mt-auto pt-2 text-lg font-bold text-blue-700">
-                        {formatPrice(item.price)}
+                        {formatPrice(item.price, profile.currency)}
                       </p>
 
                       {phoneDigits ? (
@@ -196,7 +197,9 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
             <div className="text-sm text-gray-700">
               <span className="font-semibold">{totalCount}</span> item
               {totalCount === 1 ? "" : "s"} ·{" "}
-              <span className="font-semibold">{formatPrice(totalPrice)}</span>
+              <span className="font-semibold">
+                {formatPrice(totalPrice, profile.currency)}
+              </span>
             </div>
             <Button onClick={orderOnWhatsApp} className="gap-2">
               <MessageCircle className="h-4 w-4" />

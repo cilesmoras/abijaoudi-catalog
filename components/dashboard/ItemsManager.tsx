@@ -27,7 +27,13 @@ const PAGE_SIZE = 10;
 const ALL_CATEGORIES = "all";
 const UNCATEGORIZED = "uncategorized";
 
-export function ItemsManager({ catalogName }: { catalogName: string }) {
+export function ItemsManager({
+  catalogName,
+  currency,
+}: {
+  catalogName: string;
+  currency: string | null;
+}) {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -165,6 +171,7 @@ export function ItemsManager({ catalogName }: { catalogName: string }) {
             items={selectedItems}
             categories={categories}
             storeName={catalogName}
+            currency={currency}
             disabled={selectedItems.length === 0}
           />
           <Button asChild>
@@ -280,7 +287,7 @@ export function ItemsManager({ catalogName }: { catalogName: string }) {
                         {item.categories?.name ?? "Uncategorized"}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">
-                        {formatPrice(item.price)}
+                        {formatPrice(item.price, currency)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="inline-flex gap-2">

@@ -5,7 +5,13 @@ import type { Item } from "@/lib/types";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
 import Image from "next/image";
 
-export function ItemCard({ item }: { item: Item }) {
+export function ItemCard({
+  item,
+  currency,
+}: {
+  item: Item;
+  currency?: string | null;
+}) {
   const imageSrc = getItemImageSrc(item.image_url);
 
   return (
@@ -32,7 +38,7 @@ export function ItemCard({ item }: { item: Item }) {
           </p>
         )}
         <p className="text-lg font-bold text-blue-700 mt-2">
-          {formatPrice(item.price)}
+          {formatPrice(item.price, currency)}
         </p>
       </CardContent>
     </Card>
