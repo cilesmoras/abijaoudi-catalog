@@ -6,7 +6,8 @@ import { FormEvent, Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GoogleButton } from "@/components/auth/GoogleButton";
+import { OAuthButton } from "@/components/auth/OAuthButton";
+import { GoogleIcon, FacebookIcon } from "@/components/auth/provider-icons";
 import { createClient } from "@/utils/supabase/client";
 
 function LoginForm() {
@@ -50,7 +51,18 @@ function LoginForm() {
           Manage and share your catalog.
         </p>
 
-        <GoogleButton />
+        <div className="space-y-3">
+          <OAuthButton
+            provider="google"
+            label="Continue with Google"
+            icon={<GoogleIcon />}
+          />
+          <OAuthButton
+            provider="facebook"
+            label="Continue with Facebook"
+            icon={<FacebookIcon />}
+          />
+        </div>
 
         <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
           <span className="h-px flex-1 bg-gray-200" />
