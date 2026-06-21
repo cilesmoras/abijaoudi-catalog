@@ -11,6 +11,8 @@ import {
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { PublicCatalog } from "@/components/catalog/PublicCatalog";
+import { FulfillmentBanner } from "@/components/catalog/FulfillmentBanner";
+import { getDialCode } from "@/lib/countries";
 
 async function loadCatalog(rawHandle: string) {
   const handle = normalizeHandle(rawHandle);
@@ -52,6 +54,21 @@ export default async function PublicCatalogPage({
   const currentUser = await getCurrentUser();
   const isOwner = currentUser?.id === profile.id;
 
+  // Fully-qualified phone for the contact link: prepend the owner's dial code to
+  // their local number. Legacy profiles without a country keep the raw value.
+  const phoneDialCode = getDialCode(profile.country);
+  const phoneNational = (profile.phone ?? "").replace(/\D/g, "").replace(/^0+/, "");
+  const phoneHref = profile.phone
+    ? phoneDialCode
+      ? `tel:+${phoneDialCode}${phoneNational}`
+      : `tel:${profile.phone.replace(/\s/g, "")}`
+    : null;
+  const phoneDisplay = profile.phone
+    ? phoneDialCode
+      ? `+${phoneDialCode} ${profile.phone}`
+      : profile.phone
+    : null;
+
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8 md:px-10">
       <header className="mb-8">
@@ -69,13 +86,13 @@ export default async function PublicCatalogPage({
           ) : null}
         </div>
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
-          {profile.phone ? (
+          {phoneHref ? (
             <a
-              href={`tel:${profile.phone.replace(/\s/g, "")}`}
+              href={phoneHref}
               className="inline-flex items-center gap-1.5 hover:text-gray-900"
             >
               <Phone className="h-4 w-4" />
-              {profile.phone}
+              {phoneDisplay}
             </a>
           ) : null}
           {profile.contact_email ? (
@@ -95,6 +112,8 @@ export default async function PublicCatalogPage({
           ) : null}
         </div>
       </header>
+
+      <FulfillmentBanner profile={profile} />
 
       <PublicCatalog profile={profile} items={items} categories={categories} />
     </main>

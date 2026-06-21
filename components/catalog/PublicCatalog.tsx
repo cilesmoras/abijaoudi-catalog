@@ -3,11 +3,15 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { Minus, Plus, MessageCircle } from "lucide-react";
-import { CategoryFilter } from "@/components/catalog/CategoryFilter";
+import {
+  CategorySelect,
+  CategorySidebar,
+} from "@/components/catalog/CategoryFilter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { Category, Item, Profile } from "@/lib/types";
+import { getDialCode } from "@/lib/countries";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
 
 interface PublicCatalogProps {
@@ -58,7 +62,12 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
     0,
   );
 
-  const phoneDigits = (profile.phone ?? "").replace(/\D/g, "");
+  // Build the fully-qualified WhatsApp number: the owner stores a local number
+  // plus a country, so prepend the country's dial code. Legacy profiles with no
+  // country fall back to using the stored digits as-is (assumed international).
+  const dialCode = getDialCode(profile.country);
+  const nationalDigits = (profile.phone ?? "").replace(/\D/g, "").replace(/^0+/, "");
+  const phoneDigits = dialCode ? `${dialCode}${nationalDigits}` : nationalDigits;
 
   function orderOnWhatsApp() {
     if (!phoneDigits || cartEntries.length === 0) return;
@@ -78,91 +87,108 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
 
   return (
     <>
-      <div className="mb-6 space-y-3">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by item name"
-        />
-        <CategoryFilter
-          categories={categories}
-          selected={selectedCategory}
-          onChange={setSelectedCategory}
-        />
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <aside className="hidden lg:block lg:w-56 lg:shrink-0">
+          <CategorySidebar
+            categories={categories}
+            selected={selectedCategory}
+            onChange={setSelectedCategory}
+          />
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          <div className="mb-6 space-y-3">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by item name"
+            />
+            <div className="lg:hidden">
+              <CategorySelect
+                categories={categories}
+                selected={selectedCategory}
+                onChange={setSelectedCategory}
+              />
+            </div>
+          </div>
+
+          {filteredItems.length > 0 ? (
+            <section className="grid justify-center gap-5 pb-28 [grid-template-columns:repeat(auto-fill,minmax(150px,200px))]">
+              {filteredItems.map((item) => {
+                const qty = cart[item.id] ?? 0;
+                return (
+                  <Card
+                    key={item.id}
+                    className="flex h-full flex-col overflow-hidden"
+                  >
+                    <div className="relative aspect-square w-full bg-gray-50">
+                      <Image
+                        src={getItemImageSrc(item.image_url)}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                        sizes="200px"
+                      />
+                    </div>
+                    <CardContent className="flex flex-1 flex-col gap-1 p-4">
+                      <span className="text-xs font-medium uppercase tracking-wide text-blue-600">
+                        {item.categories?.name ?? "Uncategorized"}
+                      </span>
+                      <h3 className="font-semibold leading-tight text-gray-900">
+                        {item.name}
+                      </h3>
+                      {item.description ? (
+                        <p className="line-clamp-2 text-sm text-gray-500">
+                          {item.description}
+                        </p>
+                      ) : null}
+                      <p className="mt-auto pt-2 text-lg font-bold text-blue-700">
+                        {formatPrice(item.price)}
+                      </p>
+
+                      {phoneDigits ? (
+                        qty > 0 ? (
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              aria-label="Decrease quantity"
+                              onClick={() => setQuantity(item.id, qty - 1)}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="min-w-8 text-center font-medium">
+                              {qty}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              aria-label="Increase quantity"
+                              onClick={() => setQuantity(item.id, qty + 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            className="mt-3 w-full"
+                            onClick={() => setQuantity(item.id, 1)}
+                          >
+                            Add to order
+                          </Button>
+                        )
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </section>
+          ) : (
+            <p className="text-gray-600">No items found for this filter.</p>
+          )}
+        </div>
       </div>
-
-      {filteredItems.length > 0 ? (
-        <section className="grid grid-cols-2 gap-5 pb-28 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredItems.map((item) => {
-            const qty = cart[item.id] ?? 0;
-            return (
-              <Card key={item.id} className="flex h-full flex-col overflow-hidden">
-                <div className="relative aspect-square bg-gray-50">
-                  <Image
-                    src={getItemImageSrc(item.image_url)}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                </div>
-                <CardContent className="flex flex-1 flex-col gap-1 p-4">
-                  <span className="text-xs font-medium uppercase tracking-wide text-blue-600">
-                    {item.categories?.name ?? "Uncategorized"}
-                  </span>
-                  <h3 className="font-semibold leading-tight text-gray-900">
-                    {item.name}
-                  </h3>
-                  {item.description ? (
-                    <p className="line-clamp-2 flex-1 text-sm text-gray-500">
-                      {item.description}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-lg font-bold text-blue-700">
-                    {formatPrice(item.price)}
-                  </p>
-
-                  {phoneDigits ? (
-                    qty > 0 ? (
-                      <div className="mt-3 flex items-center justify-between gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label="Decrease quantity"
-                          onClick={() => setQuantity(item.id, qty - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="min-w-8 text-center font-medium">
-                          {qty}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label="Increase quantity"
-                          onClick={() => setQuantity(item.id, qty + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        className="mt-3 w-full"
-                        onClick={() => setQuantity(item.id, 1)}
-                      >
-                        Add to order
-                      </Button>
-                    )
-                  ) : null}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </section>
-      ) : (
-        <p className="text-gray-600">No items found for this filter.</p>
-      )}
 
       {phoneDigits && totalCount > 0 ? (
         <div className="fixed inset-x-0 bottom-0 z-10 border-t bg-white/95 px-6 py-3 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] backdrop-blur">

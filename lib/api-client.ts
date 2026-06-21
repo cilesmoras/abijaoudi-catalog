@@ -73,8 +73,14 @@ export type ProfileInput = {
   handle: string;
   catalog_name: string;
   phone: string | null;
+  country: string | null;
   contact_email: string | null;
   address: string | null;
+  offers_delivery: boolean;
+  offers_pickup: boolean;
+  delivery_payment_upfront: boolean;
+  delivery_payment_cod: boolean;
+  delivery_fee: number | null;
 };
 
 export function createProfile(input: ProfileInput): Promise<Profile> {

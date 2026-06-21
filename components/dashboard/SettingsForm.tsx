@@ -40,8 +40,15 @@ export function SettingsForm({ profile }: { profile: Profile }) {
           handle: profile.handle,
           catalog_name: profile.catalog_name,
           phone: profile.phone ?? "",
+          country: profile.country ?? "",
           contact_email: profile.contact_email ?? "",
           address: profile.address ?? "",
+          offers_delivery: profile.offers_delivery,
+          offers_pickup: profile.offers_pickup,
+          delivery_payment_upfront: profile.delivery_payment_upfront,
+          delivery_payment_cod: profile.delivery_payment_cod,
+          delivery_fee:
+            profile.delivery_fee != null ? String(profile.delivery_fee) : "",
         }}
         submitLabel="Save changes"
         onSubmit={handleSubmit}

@@ -4,6 +4,7 @@ import { getCurrentProfile, getCurrentUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
 import { normalizeHandle, validateHandle } from "@/lib/handles";
+import { isValidCountryCode } from "@/lib/countries";
 import { mapProfileRow } from "@/lib/queries";
 
 export const runtime = "nodejs";
@@ -12,14 +13,58 @@ type ProfileBody = {
   handle?: string;
   catalog_name?: string;
   phone?: string | null;
+  country?: string | null;
   contact_email?: string | null;
   address?: string | null;
+  offers_delivery?: boolean;
+  offers_pickup?: boolean;
+  delivery_payment_upfront?: boolean;
+  delivery_payment_cod?: boolean;
+  delivery_fee?: number | string | null;
 };
 
 function cleanContact(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function cleanCountry(value: unknown): string | null {
+  return isValidCountryCode(value) ? (value as string).toUpperCase() : null;
+}
+
+// A flat delivery fee is optional; treat blank / non-positive / invalid values
+// as null so the catalog can show "Free delivery".
+function cleanDeliveryFee(value: unknown): number | null {
+  const fee = typeof value === "string" ? Number(value) : value;
+  if (typeof fee !== "number" || !Number.isFinite(fee) || fee <= 0) return null;
+  return fee;
+}
+
+// Fulfillment settings, normalized so dependent fields are only stored when the
+// owner actually offers delivery (no stale payment methods / fee otherwise).
+function fulfillmentFields(body: ProfileBody) {
+  const offersDelivery = Boolean(body.offers_delivery);
+  return {
+    offersDelivery,
+    offersPickup: Boolean(body.offers_pickup),
+    deliveryPaymentUpfront: offersDelivery
+      ? Boolean(body.delivery_payment_upfront)
+      : false,
+    deliveryPaymentCod: offersDelivery
+      ? Boolean(body.delivery_payment_cod)
+      : false,
+    deliveryFee: offersDelivery ? cleanDeliveryFee(body.delivery_fee) : null,
+  };
+}
+
+// A phone number is only useful for WhatsApp / `tel:` links if we know which
+// country it belongs to. Require a valid country whenever a phone is given.
+function contactError(body: ProfileBody): string | null {
+  if (cleanContact(body.phone) && !cleanCountry(body.country)) {
+    return "Select a country for your phone number";
+  }
+  return null;
 }
 
 async function handleTaken(handle: string, exceptId?: string): Promise<boolean> {
@@ -63,6 +108,8 @@ export async function POST(request: NextRequest) {
   if (!catalogName) {
     return Response.json({ error: "Catalog name is required" }, { status: 400 });
   }
+  const contactErr = contactError(body);
+  if (contactErr) return Response.json({ error: contactErr }, { status: 400 });
   if (await handleTaken(handle)) {
     return Response.json({ error: "That handle is already taken" }, { status: 409 });
   }
@@ -74,8 +121,10 @@ export async function POST(request: NextRequest) {
       handle,
       catalogName,
       phone: cleanContact(body.phone),
+      country: cleanCountry(body.country),
       contactEmail: cleanContact(body.contact_email),
       address: cleanContact(body.address),
+      ...fulfillmentFields(body),
     })
     .returning();
 
@@ -98,6 +147,8 @@ export async function PUT(request: NextRequest) {
   if (!catalogName) {
     return Response.json({ error: "Catalog name is required" }, { status: 400 });
   }
+  const contactErr = contactError(body);
+  if (contactErr) return Response.json({ error: contactErr }, { status: 400 });
   if (handle !== profile.handle && (await handleTaken(handle, profile.id))) {
     return Response.json({ error: "That handle is already taken" }, { status: 409 });
   }
@@ -108,8 +159,10 @@ export async function PUT(request: NextRequest) {
       handle,
       catalogName,
       phone: cleanContact(body.phone),
+      country: cleanCountry(body.country),
       contactEmail: cleanContact(body.contact_email),
       address: cleanContact(body.address),
+      ...fulfillmentFields(body),
       updatedAt: new Date(),
     })
     .where(eq(profiles.id, profile.id))

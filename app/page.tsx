@@ -49,7 +49,7 @@ const steps = [
 const faqs = [
   {
     q: "Is Cataloo free?",
-    a: "Yes — Cataloo is completely free to use right now.",
+    a: "Yes — Cataloo is free to use, with generous limits. A Pro plan with unlimited catalogs and items, multiple photos, a custom link, and more is coming soon.",
   },
   {
     q: "Do my customers need an account?",
@@ -59,6 +59,21 @@ const faqs = [
     q: "Can I change my handle later?",
     a: "Yes, you can update your handle, catalog name, and contact info anytime in settings.",
   },
+];
+
+const planComparison = [
+  { feature: "Catalogs", free: "1", pro: "Unlimited" },
+  { feature: "Items per catalog", free: "50", pro: "Unlimited" },
+  { feature: "Photos per item", free: "1, compressed", pro: "Multiple, full quality" },
+  {
+    feature: "Public share link",
+    free: 'Yes, "Made with Cataloo" badge',
+    pro: "Badge removed",
+  },
+  { feature: "Custom link", free: "Random ID", pro: "cataloo.app/yourbrand" },
+  { feature: "PDF export", free: "Watermarked", pro: "Watermark-free, your logo" },
+  { feature: "Analytics", free: "None", pro: "Views, top items" },
+  { feature: "Support", free: "Email, best-effort", pro: "Priority" },
 ];
 
 const previewProducts = [
@@ -94,6 +109,9 @@ export default async function LandingPage() {
               </Button>
             ) : (
               <>
+                <Button variant="ghost" asChild className="hidden sm:inline-flex">
+                  <Link href="#pricing">Pricing</Link>
+                </Button>
                 <Button variant="ghost" asChild>
                   <Link href="/login">Log in</Link>
                 </Button>
@@ -119,7 +137,7 @@ export default async function LandingPage() {
         <Reveal className="mx-auto w-full max-w-4xl">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/70 bg-blue-50/80 px-3.5 py-1.5 text-sm font-medium text-blue-700 shadow-sm backdrop-blur">
             <Sparkles className="h-3.5 w-3.5" />
-            Free to use — no card required
+            Free to start — no card required
           </span>
           <h1 className="mx-auto mt-7 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
             Share your products with{" "}
@@ -294,6 +312,166 @@ export default async function LandingPage() {
                 </li>
               ))}
             </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section
+        id="pricing"
+        className="scroll-mt-20 bg-gradient-to-b from-white to-gray-50/60 py-24"
+      >
+        <div className="mx-auto max-w-5xl px-6">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Simple, honest pricing
+            </h2>
+            <p className="mt-4 text-gray-600">
+              Start free with everything you need. Pro is on the way for sellers
+              who want more.
+            </p>
+          </Reveal>
+
+          {/* Mobile: one card per plan */}
+          <Reveal delay={100} className="mt-12 space-y-6 md:hidden">
+            {/* Free card */}
+            <div className="rounded-3xl border border-gray-200/80 bg-white p-6 shadow-lg shadow-blue-900/5">
+              <p className="text-sm font-semibold text-gray-900">Free</p>
+              <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
+                $0
+                <span className="ml-1 text-sm font-medium text-gray-500">
+                  forever
+                </span>
+              </p>
+              <Button
+                asChild
+                className="mt-5 w-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
+              >
+                <Link href={user ? "/dashboard" : "/signup"}>
+                  {user ? "Go to dashboard" : "Get started free"}
+                </Link>
+              </Button>
+              <ul className="mt-6 space-y-3 border-t border-gray-100 pt-5">
+                {planComparison.map((row) => (
+                  <li
+                    key={row.feature}
+                    className="flex items-start justify-between gap-4 text-sm"
+                  >
+                    <span className="text-gray-500">{row.feature}</span>
+                    <span className="text-right font-medium text-gray-800">
+                      {row.free}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Pro card */}
+            <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-b from-blue-50/70 to-white p-6 shadow-lg shadow-blue-900/5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-900">Pro</p>
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+                  <Sparkles className="h-3 w-3" />
+                  Coming soon
+                </span>
+              </div>
+              <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
+                $9
+                <span className="ml-1 text-sm font-medium text-gray-500">/mo</span>
+              </p>
+              <p className="text-xs text-gray-500">or $79/yr · ~2 months free</p>
+              <Button
+                disabled
+                className="mt-5 w-full cursor-not-allowed bg-gray-200 text-gray-500 hover:bg-gray-200"
+              >
+                Coming soon
+              </Button>
+              <ul className="mt-6 space-y-3 border-t border-blue-100 pt-5">
+                {planComparison.map((row) => (
+                  <li
+                    key={row.feature}
+                    className="flex items-start justify-between gap-4 text-sm"
+                  >
+                    <span className="text-gray-500">{row.feature}</span>
+                    <span className="text-right font-medium text-gray-800">
+                      {row.pro}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+
+          {/* Desktop: comparison table */}
+          <Reveal delay={100} className="mt-14 hidden md:block">
+            <div className="overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-xl shadow-blue-900/5">
+              {/* Plan headers */}
+              <div className="grid grid-cols-[1.2fr_1fr_1.1fr]">
+                <div className="border-b border-gray-200/80 p-4 sm:p-6" />
+                <div className="border-b border-l border-gray-200/80 p-4 text-center sm:p-6">
+                  <p className="text-sm font-semibold text-gray-900">Free</p>
+                  <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
+                    $0
+                  </p>
+                  <p className="text-xs text-gray-500">forever</p>
+                </div>
+                <div className="relative border-b border-l border-gray-200/80 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 p-4 text-center sm:p-6">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+                    <Sparkles className="h-3 w-3" />
+                    Coming soon
+                  </span>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">Pro</p>
+                  <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
+                    $9
+                    <span className="text-sm font-medium text-gray-500">/mo</span>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    or $79/yr · ~2 months free
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature rows */}
+              {planComparison.map((row) => (
+                <div
+                  key={row.feature}
+                  className="grid grid-cols-[1.2fr_1fr_1.1fr] border-b border-gray-100 last:border-b-0"
+                >
+                  <div className="flex items-center p-4 text-xs font-medium text-gray-900 sm:p-5 sm:text-sm">
+                    {row.feature}
+                  </div>
+                  <div className="flex items-center justify-center border-l border-gray-100 p-4 text-center text-xs text-gray-600 sm:p-5 sm:text-sm">
+                    {row.free}
+                  </div>
+                  <div className="flex items-center justify-center border-l border-gray-100 bg-blue-50/30 p-4 text-center text-xs font-medium text-gray-800 sm:p-5 sm:text-sm">
+                    {row.pro}
+                  </div>
+                </div>
+              ))}
+
+              {/* CTA row */}
+              <div className="grid grid-cols-[1.2fr_1fr_1.1fr] border-t border-gray-200/80 bg-gray-50/40">
+                <div className="hidden p-4 sm:block sm:p-6" />
+                <div className="col-span-2 flex flex-col gap-3 p-4 sm:col-span-1 sm:border-l sm:border-gray-200/80 sm:p-6">
+                  <Button
+                    asChild
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
+                  >
+                    <Link href={user ? "/dashboard" : "/signup"}>
+                      {user ? "Go to dashboard" : "Get started free"}
+                    </Link>
+                  </Button>
+                </div>
+                <div className="hidden border-l border-gray-200/80 bg-blue-50/30 p-6 sm:block">
+                  <Button
+                    disabled
+                    className="w-full cursor-not-allowed bg-gray-200 text-gray-500 hover:bg-gray-200"
+                  >
+                    Coming soon
+                  </Button>
+                </div>
+              </div>
+            </div>
           </Reveal>
         </div>
       </section>

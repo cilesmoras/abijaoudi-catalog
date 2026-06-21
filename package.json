@@ -10,6 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/apply-migration.mjs",
     "db:migrate:hidden": "node scripts/add-item-hidden.mjs",
+    "db:migrate:country": "node scripts/add-profile-country.mjs",
+    "db:migrate:fulfillment": "node scripts/add-profile-fulfillment.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

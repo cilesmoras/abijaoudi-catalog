@@ -1,18 +1,26 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CountryCombobox } from "@/components/ui/country-combobox";
+import { detectCountryCode } from "@/lib/countries";
 import type { ProfileInput } from "@/lib/api-client";
 
 export type ProfileFormValues = {
   handle: string;
   catalog_name: string;
   phone: string;
+  country: string;
   contact_email: string;
   address: string;
+  offers_delivery: boolean;
+  offers_pickup: boolean;
+  delivery_payment_upfront: boolean;
+  delivery_payment_cod: boolean;
+  delivery_fee: string;
 };
 
 interface ProfileFormProps {
@@ -31,12 +39,37 @@ export function ProfileForm({
     initialValues?.catalog_name ?? "",
   );
   const [phone, setPhone] = useState(initialValues?.phone ?? "");
+  const [country, setCountry] = useState(initialValues?.country ?? "");
   const [contactEmail, setContactEmail] = useState(
     initialValues?.contact_email ?? "",
   );
   const [address, setAddress] = useState(initialValues?.address ?? "");
+  const [offersDelivery, setOffersDelivery] = useState(
+    initialValues?.offers_delivery ?? false,
+  );
+  const [offersPickup, setOffersPickup] = useState(
+    initialValues?.offers_pickup ?? false,
+  );
+  const [paymentUpfront, setPaymentUpfront] = useState(
+    initialValues?.delivery_payment_upfront ?? false,
+  );
+  const [paymentCod, setPaymentCod] = useState(
+    initialValues?.delivery_payment_cod ?? false,
+  );
+  const [deliveryFee, setDeliveryFee] = useState(
+    initialValues?.delivery_fee ?? "",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pre-select the owner's country from the browser when none is set yet (new
+  // catalogs). Deliberately runs after mount, not during render: the server has
+  // no `navigator`, so detecting during render would cause a hydration mismatch.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!country) setCountry(detectCountryCode());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,8 +81,17 @@ export function ProfileForm({
         handle: handle.trim().toLowerCase(),
         catalog_name: catalogName.trim(),
         phone: phone.trim() || null,
+        country: phone.trim() ? country || null : null,
         contact_email: contactEmail.trim() || null,
         address: address.trim() || null,
+        offers_delivery: offersDelivery,
+        offers_pickup: offersPickup,
+        delivery_payment_upfront: offersDelivery ? paymentUpfront : false,
+        delivery_payment_cod: offersDelivery ? paymentCod : false,
+        delivery_fee:
+          offersDelivery && deliveryFee.trim()
+            ? Number(deliveryFee)
+            : null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -91,15 +133,24 @@ export function ProfileForm({
 
       <div className="space-y-2">
         <Label htmlFor="phone">Phone / WhatsApp</Label>
-        <Input
-          id="phone"
-          type="tel"
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-          placeholder="+1 555 123 4567"
-        />
+        <div className="flex gap-2">
+          <CountryCombobox
+            value={country}
+            onChange={setCountry}
+            className="w-[7.5rem] shrink-0"
+          />
+          <Input
+            id="phone"
+            type="tel"
+            className="flex-1"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            placeholder="917 123 4567"
+          />
+        </div>
         <p className="text-xs text-gray-500">
-          Used for the &quot;Order on WhatsApp&quot; button on your catalog.
+          Used for the &quot;Order on WhatsApp&quot; button on your catalog. Pick
+          your country, then enter your local number without the country code.
         </p>
       </div>
 
@@ -123,6 +174,80 @@ export function ProfileForm({
           placeholder="123 Main St, Springfield"
           rows={2}
         />
+      </div>
+
+      <div className="space-y-3 rounded-md border p-4">
+        <div>
+          <p className="text-sm font-medium text-gray-900">Delivery & pickup</p>
+          <p className="text-xs text-gray-500">
+            Shown to customers on your catalog so they know how you fulfill
+            orders.
+          </p>
+        </div>
+
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            checked={offersDelivery}
+            onChange={(event) => setOffersDelivery(event.target.checked)}
+          />
+          <span className="text-sm text-gray-700">Offers delivery</span>
+        </label>
+
+        {offersDelivery ? (
+          <div className="space-y-3 border-l-2 border-gray-100 pl-4">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-700">
+                Payment accepted for deliveries
+              </p>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={paymentUpfront}
+                  onChange={(event) => setPaymentUpfront(event.target.checked)}
+                />
+                <span className="text-sm text-gray-700">Upfront payment</span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={paymentCod}
+                  onChange={(event) => setPaymentCod(event.target.checked)}
+                />
+                <span className="text-sm text-gray-700">Cash on delivery</span>
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delivery_fee">Delivery fee</Label>
+              <Input
+                id="delivery_fee"
+                type="number"
+                min="0"
+                step="0.01"
+                value={deliveryFee}
+                onChange={(event) => setDeliveryFee(event.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-gray-500">
+                Leave blank for free delivery.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            checked={offersPickup}
+            onChange={(event) => setOffersPickup(event.target.checked)}
+          />
+          <span className="text-sm text-gray-700">Offers pickup</span>
+        </label>
       </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

@@ -6,7 +6,7 @@ import { getCurrentProfile } from "@/lib/dal";
 export const runtime = "nodejs";
 
 // Longest-edge sizes (px). Catalog image is kept small to keep PDF exports light.
-const CATALOG_MAX = 300; // catalog page + embedded in the exported PDF
+const CATALOG_MAX = 200; // catalog page + embedded in the exported PDF
 const THUMB_MAX = 80; // displayed ~40px in the admin items table
 
 const bucketName = "item-images";

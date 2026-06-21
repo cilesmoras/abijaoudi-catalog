@@ -17,8 +17,20 @@ export const profiles = pgTable("profiles", {
   handle: text("handle").notNull().unique(),
   catalogName: text("catalog_name").notNull(),
   phone: text("phone"),
+  country: text("country"),
   contactEmail: text("contact_email"),
   address: text("address"),
+  offersDelivery: boolean("offers_delivery").notNull().default(false),
+  offersPickup: boolean("offers_pickup").notNull().default(false),
+  deliveryPaymentUpfront: boolean("delivery_payment_upfront")
+    .notNull()
+    .default(false),
+  deliveryPaymentCod: boolean("delivery_payment_cod").notNull().default(false),
+  deliveryFee: numeric("delivery_fee", {
+    precision: 10,
+    scale: 2,
+    mode: "number",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
