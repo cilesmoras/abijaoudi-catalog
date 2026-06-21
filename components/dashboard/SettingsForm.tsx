@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { toast } from "sonner";
 import { BackLink } from "@/components/dashboard/BackLink";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { updateProfile, type ProfileInput } from "@/lib/api-client";
@@ -9,11 +9,10 @@ import type { Profile } from "@/lib/types";
 
 export function SettingsForm({ profile }: { profile: Profile }) {
   const router = useRouter();
-  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(input: ProfileInput) {
     await updateProfile(input);
-    setSuccess(true);
+    toast.success("Settings saved.");
     router.refresh();
   }
 
@@ -30,10 +29,6 @@ export function SettingsForm({ profile }: { profile: Profile }) {
           </p>
         </div>
       </div>
-
-      {success ? (
-        <p className="mb-4 text-sm text-green-600">Settings saved.</p>
-      ) : null}
 
       <ProfileForm
         initialValues={{

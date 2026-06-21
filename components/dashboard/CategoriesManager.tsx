@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { BackLink } from "@/components/dashboard/BackLink";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,15 +32,17 @@ export function CategoriesManager() {
     if (!trimmedName) return;
 
     setSubmitting(true);
-    setError(null);
     try {
       const created = await createCategory(trimmedName);
       setCategories((current) =>
         [...current, created].sort((a, b) => a.name.localeCompare(b.name)),
       );
       setNewCategoryName("");
+      toast.success("Category added.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create category");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create category",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -50,12 +53,13 @@ export function CategoriesManager() {
     try {
       await deleteCategory(categoryId);
     } catch {
-      setError("Failed to delete category");
+      toast.error("Failed to delete category");
       return;
     }
     setCategories((current) =>
       current.filter((category) => category.id !== categoryId),
     );
+    toast.success("Category deleted.");
   }
 
   return (

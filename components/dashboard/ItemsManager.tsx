@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { ExportButton } from "@/components/catalog/ExportButton";
 import { BackLink } from "@/components/dashboard/BackLink";
 import { Button } from "@/components/ui/button";
@@ -129,11 +130,12 @@ export function ItemsManager({
     try {
       await deleteItem(itemId);
     } catch {
-      setError("Failed to delete item");
+      toast.error("Failed to delete item");
       return;
     }
     setItems((current) => current.filter((item) => item.id !== itemId));
     setSelectedItemIds((current) => current.filter((id) => id !== itemId));
+    toast.success("Item deleted.");
   }
 
   async function handleToggleHidden(item: Item) {
@@ -146,8 +148,9 @@ export function ItemsManager({
             : existing,
         ),
       );
+      toast.success(updated.hidden ? "Item hidden." : "Item visible.");
     } catch {
-      setError("Failed to update item visibility");
+      toast.error("Failed to update item visibility");
     }
   }
 

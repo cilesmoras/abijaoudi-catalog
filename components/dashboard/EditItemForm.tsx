@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ItemForm, type ItemFormValues } from "@/components/admin/ItemForm";
 import { BackLink } from "@/components/dashboard/BackLink";
 import { fetchCategories, fetchItem, updateItem } from "@/lib/api-client";
@@ -40,9 +41,10 @@ export function EditItemForm({ itemId }: { itemId: string }) {
     setError(null);
     try {
       await updateItem(itemId, values);
+      toast.success("Changes saved.");
       router.push("/dashboard/items");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update item");
+      toast.error(err instanceof Error ? err.message : "Failed to update item");
       setSubmitting(false);
     }
   }

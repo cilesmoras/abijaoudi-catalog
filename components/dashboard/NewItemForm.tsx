@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ItemForm, type ItemFormValues } from "@/components/admin/ItemForm";
 import { BackLink } from "@/components/dashboard/BackLink";
 import { createItem, fetchCategories } from "@/lib/api-client";
@@ -9,26 +10,22 @@ import type { Category } from "@/lib/types";
 export function NewItemForm() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     fetchCategories()
       .then(setCategories)
-      .catch(() => setError("Failed to load categories"));
+      .catch(() => toast.error("Failed to load categories"));
   }, []);
 
   async function handleSubmit(values: ItemFormValues) {
     setSubmitting(true);
-    setError(null);
-    setSuccess(false);
     try {
       await createItem(values);
-      setSuccess(true);
+      toast.success("Item created successfully.");
       setFormKey((k) => k + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create item");
+      toast.error(err instanceof Error ? err.message : "Failed to create item");
     } finally {
       setSubmitting(false);
     }
@@ -42,11 +39,6 @@ export function NewItemForm() {
           Create item
         </h1>
       </div>
-
-      {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
-      {success ? (
-        <p className="mb-4 text-sm text-green-600">Item created successfully.</p>
-      ) : null}
 
       <ItemForm
         key={formKey}
