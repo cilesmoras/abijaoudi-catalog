@@ -20,6 +20,7 @@ export type ItemFormValues = {
   name: string;
   description: string | null;
   price: number;
+  unit: string | null;
   category_id: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
@@ -47,6 +48,7 @@ export function ItemForm({
     initialValues?.description ?? "",
   );
   const [price, setPrice] = useState(initialValues?.price?.toString() ?? "");
+  const [unit, setUnit] = useState(initialValues?.unit ?? "");
   const [categoryId, setCategoryId] = useState(
     initialValues?.category_id ?? EMPTY_CATEGORY,
   );
@@ -193,6 +195,7 @@ export function ItemForm({
       name: name.trim(),
       description: description.trim() ? description.trim() : null,
       price: parsedPrice,
+      unit: unit.trim() ? unit.trim() : null,
       category_id: categoryId,
       image_url: finalImageUrl,
       thumbnail_url: finalThumbnailUrl,
@@ -238,6 +241,19 @@ export function ItemForm({
           placeholder="0.00"
           required
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="unit">Unit of measurement</Label>
+        <Input
+          id="unit"
+          value={unit}
+          onChange={(event) => setUnit(event.target.value)}
+          placeholder="e.g. kg, L, piece, dozen"
+        />
+        <p className="text-xs text-gray-500">
+          Optional. Shown next to the price (e.g. “$5.00 / kg”).
+        </p>
       </div>
 
       <div className="space-y-2">

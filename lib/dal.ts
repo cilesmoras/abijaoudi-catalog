@@ -32,6 +32,8 @@ function mapProfile(row: typeof profiles.$inferSelect): Profile {
     contact_email: row.contactEmail,
     address: row.address,
     currency: row.currency,
+    plan: row.plan === "pro" ? "pro" : "free",
+    logo_url: row.logoUrl,
     offers_delivery: row.offersDelivery,
     offers_pickup: row.offersPickup,
     delivery_payment_upfront: row.deliveryPaymentUpfront,

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,8 @@ import { CountryCombobox } from "@/components/ui/country-combobox";
 import { CurrencyCombobox } from "@/components/ui/currency-combobox";
 import { detectCountryCode } from "@/lib/countries";
 import type { ProfileInput } from "@/lib/api-client";
+import type { Plan } from "@/lib/types";
+import { canUseCustomHandle, isPro } from "@/lib/plans";
 
 export type ProfileFormValues = {
   handle: string;
@@ -23,20 +25,30 @@ export type ProfileFormValues = {
   delivery_payment_upfront: boolean;
   delivery_payment_cod: boolean;
   delivery_fee: string;
+  logo_url: string;
 };
 
 interface ProfileFormProps {
   initialValues?: Partial<ProfileFormValues>;
   submitLabel: string;
   onSubmit: (input: ProfileInput) => Promise<void>;
+  /** Drives handle/logo gating. Defaults to "free". */
+  plan?: Plan;
+  /** Onboarding hides the handle entirely (it's auto-assigned server-side). */
+  hideHandle?: boolean;
 }
 
 export function ProfileForm({
   initialValues,
   submitLabel,
   onSubmit,
+  plan = "free",
+  hideHandle = false,
 }: ProfileFormProps) {
   const [handle, setHandle] = useState(initialValues?.handle ?? "");
+  const [logoUrl, setLogoUrl] = useState(initialValues?.logo_url ?? "");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const customHandleAllowed = canUseCustomHandle(plan);
   const [catalogName, setCatalogName] = useState(
     initialValues?.catalog_name ?? "",
   );
@@ -96,6 +108,7 @@ export function ProfileForm({
           offersDelivery && deliveryFee.trim()
             ? Number(deliveryFee)
             : null,
+        logo_url: logoUrl.trim() || null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -104,25 +117,96 @@ export function ProfileForm({
     }
   }
 
+  async function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? "Logo upload failed");
+      }
+      const payload = (await response.json()) as { url: string };
+      setLogoUrl(payload.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Logo upload failed");
+    } finally {
+      setUploadingLogo(false);
+      event.target.value = "";
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="space-y-2">
-        <Label htmlFor="handle">Handle</Label>
-        <div className="flex items-center rounded-md border bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500">
-          <span className="select-none pl-3 text-sm text-gray-400">/</span>
-          <Input
-            id="handle"
-            value={handle}
-            onChange={(event) => setHandle(event.target.value.toLowerCase())}
-            placeholder="marias-bakery"
-            className="border-0 bg-transparent shadow-none focus-visible:ring-0"
-            required
-          />
+      {hideHandle ? null : (
+        <div className="space-y-2">
+          <Label htmlFor="handle">Handle</Label>
+          <div
+            className={`flex items-center rounded-md border ${
+              customHandleAllowed
+                ? "bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500"
+                : "bg-gray-100"
+            }`}
+          >
+            <span className="select-none pl-3 text-sm text-gray-400">/</span>
+            <Input
+              id="handle"
+              value={handle}
+              onChange={(event) => setHandle(event.target.value.toLowerCase())}
+              placeholder="marias-bakery"
+              className="border-0 bg-transparent shadow-none focus-visible:ring-0 disabled:opacity-100"
+              disabled={!customHandleAllowed}
+              required={customHandleAllowed}
+            />
+          </div>
+          {customHandleAllowed ? (
+            <p className="text-xs text-gray-500">
+              Your public catalog link. 3–30 lowercase letters, numbers, hyphens.
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500">
+              A custom link is a{" "}
+              <span className="font-medium text-blue-600">Pro</span> feature
+              (coming soon). Your Free catalog keeps this auto-generated link.
+            </p>
+          )}
         </div>
-        <p className="text-xs text-gray-500">
-          Your public catalog link. 3–30 lowercase letters, numbers, hyphens.
-        </p>
-      </div>
+      )}
+
+      {isPro(plan) ? (
+        <div className="space-y-2">
+          <Label htmlFor="logo">Logo (for PDF export)</Label>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt="Catalog logo"
+              className="h-12 w-12 rounded border bg-white object-contain p-1"
+            />
+          ) : null}
+          <Input
+            id="logo"
+            type="file"
+            accept="image/*"
+            onChange={handleLogoChange}
+            disabled={uploadingLogo}
+          />
+          <p className="text-xs text-gray-500">
+            {uploadingLogo
+              ? "Uploading…"
+              : "Shown on your exported PDF in place of the Cataloo branding."}
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="catalog_name">Catalog name</Label>

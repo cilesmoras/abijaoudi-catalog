@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { categories, items, profiles } from "@/lib/db/schema";
 import type { Category, Item, Profile } from "@/lib/types";
@@ -29,6 +29,7 @@ const itemSelection = {
   name: items.name,
   description: items.description,
   price: items.price,
+  unit: items.unit,
   image_url: items.imageUrl,
   thumbnail_url: items.thumbnailUrl,
   hidden: items.hidden,
@@ -47,6 +48,7 @@ type ItemRow = {
   name: string;
   description: string | null;
   price: number;
+  unit: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
   hidden: boolean;
@@ -62,6 +64,7 @@ export function mapItemRow(row: ItemRow): Item {
     name: row.name,
     description: row.description,
     price: row.price,
+    unit: row.unit,
     image_url: row.image_url,
     thumbnail_url: row.thumbnail_url,
     hidden: row.hidden,
@@ -96,6 +99,8 @@ export function mapProfileRow(row: typeof profiles.$inferSelect): Profile {
     contact_email: row.contactEmail,
     address: row.address,
     currency: row.currency,
+    plan: row.plan === "pro" ? "pro" : "free",
+    logo_url: row.logoUrl,
     offers_delivery: row.offersDelivery,
     offers_pickup: row.offersPickup,
     delivery_payment_upfront: row.deliveryPaymentUpfront,
@@ -114,6 +119,15 @@ export async function getItemsForOwner(ownerId: string): Promise<Item[]> {
     .where(eq(items.ownerId, ownerId))
     .orderBy(asc(items.name));
   return rows.map(mapItemRow);
+}
+
+/** Total item count for an owner — used to enforce the Free plan item limit. */
+export async function countItemsForOwner(ownerId: string): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(items)
+    .where(eq(items.ownerId, ownerId));
+  return row?.value ?? 0;
 }
 
 /** Visible (non-hidden) items only — used for the public catalog. */

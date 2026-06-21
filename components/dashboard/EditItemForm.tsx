@@ -68,6 +68,7 @@ export function EditItemForm({ itemId }: { itemId: string }) {
             name: item.name,
             description: item.description,
             price: item.price,
+            unit: item.unit,
             category_id: item.category_id,
             image_url: item.image_url,
             thumbnail_url: item.thumbnail_url,

@@ -145,6 +145,11 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
                       ) : null}
                       <p className="mt-auto pt-2 text-lg font-bold text-blue-700">
                         {formatPrice(item.price, profile.currency)}
+                        {item.unit ? (
+                          <span className="ml-1 text-sm font-medium text-gray-500">
+                            / {item.unit}
+                          </span>
+                        ) : null}
                       </p>
 
                       {phoneDigits ? (

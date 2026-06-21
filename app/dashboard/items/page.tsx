@@ -8,6 +8,8 @@ export default async function DashboardItemsPage() {
       <ItemsManager
         catalogName={profile.catalog_name}
         currency={profile.currency}
+        plan={profile.plan}
+        logoUrl={profile.logo_url}
       />
     </main>
   );

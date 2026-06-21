@@ -45,9 +45,11 @@ export function SettingsForm({ profile }: { profile: Profile }) {
           delivery_payment_cod: profile.delivery_payment_cod,
           delivery_fee:
             profile.delivery_fee != null ? String(profile.delivery_fee) : "",
+          logo_url: profile.logo_url ?? "",
         }}
         submitLabel="Save changes"
         onSubmit={handleSubmit}
+        plan={profile.plan}
       />
     </>
   );

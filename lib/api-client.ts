@@ -82,6 +82,7 @@ export type ProfileInput = {
   delivery_payment_upfront: boolean;
   delivery_payment_cod: boolean;
   delivery_fee: number | null;
+  logo_url: string | null;
 };
 
 export function createProfile(input: ProfileInput): Promise<Profile> {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LayoutDashboard, Mail, MapPin, Phone } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
+import { showBadge } from "@/lib/plans";
 import { isReservedHandle, normalizeHandle } from "@/lib/handles";
 import {
   getCategoriesForOwner,
@@ -116,6 +117,19 @@ export default async function PublicCatalogPage({
       <FulfillmentBanner profile={profile} />
 
       <PublicCatalog profile={profile} items={items} categories={categories} />
+
+      {showBadge(profile.plan) ? (
+        <footer className="mt-12 border-t pt-6 text-center">
+          <a
+            href="https://cataloo.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            Made with Cataloo
+          </a>
+        </footer>
+      ) : null}
     </main>
   );
 }

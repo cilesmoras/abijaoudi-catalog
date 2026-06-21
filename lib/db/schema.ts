@@ -21,6 +21,12 @@ export const profiles = pgTable("profiles", {
   contactEmail: text("contact_email"),
   address: text("address"),
   currency: text("currency"),
+  // Subscription tier. Free is enforced (item limit, random handle, share
+  // badge, watermarked PDF); Pro unlocks them. Activated manually for now —
+  // see scripts/set-plan.mjs — until a payment provider is wired in.
+  plan: text("plan").notNull().default("free"),
+  // Pro-only: logo shown on PDF exports in place of the Cataloo branding.
+  logoUrl: text("logo_url"),
   offersDelivery: boolean("offers_delivery").notNull().default(false),
   offersPickup: boolean("offers_pickup").notNull().default(false),
   deliveryPaymentUpfront: boolean("delivery_payment_upfront")
@@ -69,6 +75,7 @@ export const items = pgTable("items", {
   name: text("name").notNull(),
   description: text("description"),
   price: numeric("price", { precision: 10, scale: 2, mode: "number" }).notNull(),
+  unit: text("unit"),
   imageUrl: text("image_url"),
   thumbnailUrl: text("thumbnail_url"),
   hidden: boolean("hidden").notNull().default(false),

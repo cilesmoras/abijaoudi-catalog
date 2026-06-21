@@ -63,7 +63,7 @@ const faqs = [
 
 const planComparison = [
   { feature: "Catalogs", free: "1", pro: "Unlimited" },
-  { feature: "Items per catalog", free: "50", pro: "Unlimited" },
+  { feature: "Items per catalog", free: "30", pro: "Unlimited" },
   { feature: "Photos per item", free: "1, compressed", pro: "Multiple, full quality" },
   {
     feature: "Public share link",

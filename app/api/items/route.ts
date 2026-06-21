@@ -4,9 +4,11 @@ import { db } from "@/lib/db";
 import { items } from "@/lib/db/schema";
 import {
   categoryBelongsToOwner,
+  countItemsForOwner,
   getItemForOwner,
   getItemsForOwner,
 } from "@/lib/queries";
+import { canCreateItem, FREE_ITEM_LIMIT } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -25,8 +27,15 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { name, description, price, category_id, image_url, thumbnail_url } =
-    body;
+  const {
+    name,
+    description,
+    price,
+    unit,
+    category_id,
+    image_url,
+    thumbnail_url,
+  } = body;
 
   if (!name || price === undefined) {
     return Response.json(
@@ -39,6 +48,17 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid category" }, { status: 400 });
   }
 
+  // Free plan caps the number of items; Pro is unlimited.
+  const itemCount = await countItemsForOwner(profile.id);
+  if (!canCreateItem(profile.plan, itemCount)) {
+    return Response.json(
+      {
+        error: `You've reached the Free plan limit of ${FREE_ITEM_LIMIT} items. Upgrade to Pro for unlimited items.`,
+      },
+      { status: 403 },
+    );
+  }
+
   const [created] = await db
     .insert(items)
     .values({
@@ -46,6 +66,7 @@ export async function POST(request: NextRequest) {
       name,
       description,
       price: Number(price),
+      unit: unit || null,
       categoryId: category_id || null,
       imageUrl: image_url || null,
       thumbnailUrl: thumbnail_url || null,

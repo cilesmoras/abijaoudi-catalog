@@ -34,8 +34,15 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, description, price, category_id, image_url, thumbnail_url } =
-    body;
+  const {
+    name,
+    description,
+    price,
+    unit,
+    category_id,
+    image_url,
+    thumbnail_url,
+  } = body;
 
   if (category_id && !(await categoryBelongsToOwner(profile.id, category_id))) {
     return Response.json({ error: "Invalid category" }, { status: 400 });
@@ -47,6 +54,7 @@ export async function PUT(
       name,
       description,
       price: Number(price),
+      unit: unit || null,
       categoryId: category_id || null,
       imageUrl: image_url || null,
       thumbnailUrl: thumbnail_url || null,

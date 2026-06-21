@@ -1,3 +1,5 @@
+export type Plan = "free" | "pro";
+
 export type Profile = {
   id: string;
   handle: string;
@@ -7,6 +9,8 @@ export type Profile = {
   contact_email: string | null;
   address: string | null;
   currency: string | null;
+  plan: Plan;
+  logo_url: string | null;
   offers_delivery: boolean;
   offers_pickup: boolean;
   delivery_payment_upfront: boolean;
@@ -33,6 +37,7 @@ export type Item = {
   name: string;
   description: string | null;
   price: number;
+  unit: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
   hidden: boolean;

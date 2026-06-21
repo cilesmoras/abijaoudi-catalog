@@ -21,7 +21,8 @@ import {
   deleteItem,
   setItemHidden,
 } from "@/lib/api-client";
-import type { Category, Item } from "@/lib/types";
+import type { Category, Item, Plan } from "@/lib/types";
+import { FREE_ITEM_LIMIT, isPro } from "@/lib/plans";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
@@ -31,9 +32,13 @@ const UNCATEGORIZED = "uncategorized";
 export function ItemsManager({
   catalogName,
   currency,
+  plan,
+  logoUrl,
 }: {
   catalogName: string;
   currency: string | null;
+  plan: Plan;
+  logoUrl: string | null;
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -154,6 +159,8 @@ export function ItemsManager({
     }
   }
 
+  const atLimit = !isPro(plan) && items.length >= FREE_ITEM_LIMIT;
+
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -167,6 +174,11 @@ export function ItemsManager({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {!isPro(plan) ? (
+            <span className="text-sm text-gray-600">
+              {items.length} of {FREE_ITEM_LIMIT} items
+            </span>
+          ) : null}
           <span className="text-sm text-gray-600">
             {selectedItems.length} selected
           </span>
@@ -175,13 +187,31 @@ export function ItemsManager({
             categories={categories}
             storeName={catalogName}
             currency={currency}
+            plan={plan}
+            logoUrl={logoUrl}
             disabled={selectedItems.length === 0}
           />
-          <Button asChild>
-            <Link href="/dashboard/items/new">New item</Link>
-          </Button>
+          {atLimit ? (
+            <Button disabled title="Free plan item limit reached">
+              New item
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/dashboard/items/new">New item</Link>
+            </Button>
+          )}
         </div>
       </div>
+
+      {atLimit ? (
+        <p className="mb-4 text-sm text-amber-600">
+          You&apos;ve reached the Free plan limit of {FREE_ITEM_LIMIT} items.{" "}
+          <Link href="/#pricing" className="font-medium underline">
+            Upgrade to Pro
+          </Link>{" "}
+          for unlimited items.
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
@@ -249,6 +279,9 @@ export function ItemsManager({
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                       Price
                     </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                      Unit
+                    </th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
                       Actions
                     </th>
@@ -291,6 +324,9 @@ export function ItemsManager({
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {formatPrice(item.price, currency)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {item.unit ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="inline-flex gap-2">

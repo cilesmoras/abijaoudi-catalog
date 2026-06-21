@@ -18,6 +18,7 @@ export function OnboardingForm({ suggestedName }: { suggestedName: string }) {
       initialValues={{ catalog_name: suggestedName }}
       submitLabel="Create catalog"
       onSubmit={handleSubmit}
+      hideHandle
     />
   );
 }

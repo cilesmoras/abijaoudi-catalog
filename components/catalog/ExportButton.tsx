@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { Category, Item } from "@/lib/types";
+import type { Category, Item, Plan } from "@/lib/types";
+import { isPro } from "@/lib/plans";
 import { formatPrice } from "@/lib/utils";
 import { Download } from "lucide-react";
 import { useState } from "react";
@@ -11,6 +12,8 @@ interface ExportButtonProps {
   categories: Category[];
   storeName: string;
   currency: string | null;
+  plan: Plan;
+  logoUrl: string | null;
   disabled?: boolean;
 }
 
@@ -19,6 +22,8 @@ export function ExportButton({
   categories,
   storeName,
   currency,
+  plan,
+  logoUrl,
   disabled = false,
 }: ExportButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -26,7 +31,7 @@ export function ExportButton({
   async function handleExport() {
     setLoading(true);
     try {
-      const { jsPDF } = await import("jspdf");
+      const { jsPDF, GState } = await import("jspdf");
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -53,6 +58,20 @@ export function ExportButton({
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text(storeName, pageW / 2, 13, { align: "center" });
+
+      // Pro: draw the owner's logo at the left of the header band.
+      if (isPro(plan) && logoUrl) {
+        try {
+          const logoData = await fetchImageAsDataUrl(logoUrl);
+          const { w: lw, h: lh } = await getImageSize(logoData);
+          const maxH = 14;
+          const drawH = maxH;
+          const drawW = (lw / lh) * drawH;
+          doc.addImage(logoData, "JPEG", margin, 3, drawW, drawH);
+        } catch {
+          // If the logo can't be fetched, just skip it — the title still shows.
+        }
+      }
 
       const date = new Date().toLocaleDateString("en-US", {
         year: "numeric",
@@ -211,13 +230,47 @@ export function ExportButton({
         y += 4;
       }
 
-      // Footer on last page
-      doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.setFont("helvetica", "normal");
-      doc.text(`${items.length} products`, pageW / 2, pageH - 6, {
-        align: "center",
-      });
+      // Free catalogs are watermarked: a large translucent diagonal stamp on
+      // every page, plus a clickable "Made with Cataloo" link in the footer.
+      // Pro omits both.
+      const free = !isPro(plan);
+      const pageCount = doc.getNumberOfPages();
+      for (let p = 1; p <= pageCount; p++) {
+        doc.setPage(p);
+
+        if (free) {
+          // Diagonal watermark drawn over the content at low opacity.
+          doc.saveGraphicsState();
+          doc.setGState(new GState({ opacity: 0.12 }));
+          doc.setTextColor(37, 99, 235); // blue-600
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(42);
+          doc.text("Made with Cataloo", pageW / 2, pageH / 2, {
+            align: "center",
+            angle: 35,
+          });
+          doc.restoreGraphicsState();
+        }
+
+        // Footer (full opacity).
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        if (free) {
+          doc.setTextColor(156, 163, 175);
+          doc.text(`${items.length} products`, margin, pageH - 6);
+          doc.setTextColor(37, 99, 235); // blue-600
+          const label = "Made with Cataloo";
+          const labelW = doc.getTextWidth(label);
+          doc.textWithLink(label, pageW - margin - labelW, pageH - 6, {
+            url: "https://cataloo.app",
+          });
+        } else {
+          doc.setTextColor(156, 163, 175);
+          doc.text(`${items.length} products`, pageW / 2, pageH - 6, {
+            align: "center",
+          });
+        }
+      }
 
       const slug =
         storeName

@@ -3,10 +3,16 @@ import { and, eq, ne } from "drizzle-orm";
 import { getCurrentProfile, getCurrentUser } from "@/lib/dal";
 import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
-import { normalizeHandle, validateHandle } from "@/lib/handles";
+import {
+  generateRandomHandle,
+  isReservedHandle,
+  normalizeHandle,
+  validateHandle,
+} from "@/lib/handles";
 import { isValidCountryCode } from "@/lib/countries";
 import { isValidCurrencyCode } from "@/lib/currencies";
 import { mapProfileRow } from "@/lib/queries";
+import { canUseCustomHandle, isPro } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -23,6 +29,7 @@ type ProfileBody = {
   delivery_payment_upfront?: boolean;
   delivery_payment_cod?: boolean;
   delivery_fee?: number | string | null;
+  logo_url?: string | null;
 };
 
 function cleanContact(value: unknown): string | null {
@@ -85,6 +92,19 @@ async function handleTaken(handle: string, exceptId?: string): Promise<boolean> 
   return Boolean(row);
 }
 
+// New Free catalogs get an auto-assigned random handle (custom handles are a
+// Pro feature). Retry on the rare collision / reserved-word clash.
+async function uniqueRandomHandle(): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = generateRandomHandle();
+    if (!isReservedHandle(candidate) && !(await handleTaken(candidate))) {
+      return candidate;
+    }
+  }
+  // Astronomically unlikely to get here; widen the space and try once more.
+  return generateRandomHandle(8);
+}
+
 export async function GET() {
   const profile = await getCurrentProfile();
   if (!profile) {
@@ -106,19 +126,17 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json()) as ProfileBody;
-  const handle = normalizeHandle(body.handle ?? "");
   const catalogName = (body.catalog_name ?? "").trim();
 
-  const handleError = validateHandle(handle);
-  if (handleError) return Response.json({ error: handleError }, { status: 400 });
   if (!catalogName) {
     return Response.json({ error: "Catalog name is required" }, { status: 400 });
   }
   const contactErr = contactError(body);
   if (contactErr) return Response.json({ error: contactErr }, { status: 400 });
-  if (await handleTaken(handle)) {
-    return Response.json({ error: "That handle is already taken" }, { status: 409 });
-  }
+
+  // New catalogs start on the Free plan, so the handle is always auto-assigned;
+  // any client-supplied handle is ignored. Custom handles are a Pro feature.
+  const handle = await uniqueRandomHandle();
 
   const [created] = await db
     .insert(profiles)
@@ -147,24 +165,39 @@ export async function PUT(request: NextRequest) {
 
   const body = (await request.json()) as ProfileBody;
   const catalogName = (body.catalog_name ?? "").trim();
-  const handle = normalizeHandle(body.handle ?? "");
 
-  const handleError = validateHandle(handle);
-  if (handleError) return Response.json({ error: handleError }, { status: 400 });
   if (!catalogName) {
     return Response.json({ error: "Catalog name is required" }, { status: 400 });
   }
   const contactErr = contactError(body);
   if (contactErr) return Response.json({ error: contactErr }, { status: 400 });
-  if (handle !== profile.handle && (await handleTaken(handle, profile.id))) {
-    return Response.json({ error: "That handle is already taken" }, { status: 409 });
+
+  // Only Pro can change the handle (custom links) and set a PDF logo. Free
+  // users keep their existing handle/logo no matter what the client sends.
+  let handle = profile.handle;
+  if (canUseCustomHandle(profile.plan)) {
+    const submitted = normalizeHandle(body.handle ?? "");
+    const handleError = validateHandle(submitted);
+    if (handleError)
+      return Response.json({ error: handleError }, { status: 400 });
+    if (submitted !== profile.handle && (await handleTaken(submitted, profile.id))) {
+      return Response.json(
+        { error: "That handle is already taken" },
+        { status: 409 },
+      );
+    }
+    handle = submitted;
   }
+  const logoUrl = isPro(profile.plan)
+    ? cleanContact(body.logo_url)
+    : profile.logo_url;
 
   const [updated] = await db
     .update(profiles)
     .set({
       handle,
       catalogName,
+      logoUrl,
       phone: cleanContact(body.phone),
       country: cleanCountry(body.country),
       contactEmail: cleanContact(body.contact_email),
