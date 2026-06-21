@@ -165,9 +165,38 @@ export function isValidCurrencyCode(value: unknown): value is string {
   return typeof value === "string" && BY_CODE.has(value.toUpperCase());
 }
 
-// Returns the narrow symbol for a currency (e.g. "₱", "$"), falling back to the
-// code itself if the runtime can't resolve a symbol.
+// Many currencies share the bare "$" narrow symbol (and a few share others),
+// which is confusing for customers — a price in Liberian or Australian dollars
+// looks identical to US dollars. Override the dollar family with explicit,
+// region-qualified symbols so each is unmistakable, including US$ itself.
+const SYMBOL_OVERRIDES: Record<string, string> = {
+  USD: "US$",
+  AUD: "A$",
+  CAD: "C$",
+  SGD: "S$",
+  HKD: "HK$",
+  NZD: "NZ$",
+  LRD: "L$",
+  BND: "B$",
+  BBD: "Bds$",
+  BZD: "BZ$",
+  BMD: "BD$",
+  XCD: "EC$",
+  TTD: "TT$",
+  JMD: "J$",
+  NAD: "N$",
+  FJD: "FJ$",
+  GYD: "G$",
+  SRD: "Sr$",
+  ANG: "NAƒ",
+};
+
+// Returns the display symbol for a currency (e.g. "₱", "US$"). Uses an explicit
+// override where the runtime's narrow symbol would be ambiguous, otherwise the
+// narrow symbol, falling back to the code itself when none resolves.
 export function getCurrencySymbol(code: string): string {
+  const upper = code.toUpperCase();
+  if (SYMBOL_OVERRIDES[upper]) return SYMBOL_OVERRIDES[upper];
   try {
     const parts = new Intl.NumberFormat("en-US", {
       style: "currency",
