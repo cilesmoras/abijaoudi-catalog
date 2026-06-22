@@ -3,7 +3,6 @@ import { ExternalLink } from "lucide-react";
 import { requireProfile } from "@/lib/dal";
 import { countItemsForOwner } from "@/lib/queries";
 import { FREE_ITEM_LIMIT, isPro } from "@/lib/plans";
-import { LogoutButton } from "@/components/admin/LogoutButton";
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,7 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="w-full">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">
               {profile.catalog_name}
@@ -58,7 +57,6 @@ export default async function DashboardPage() {
             )}
           </p>
         </div>
-        <LogoutButton />
       </div>
 
       <section className="mt-8 grid gap-5 md:grid-cols-2">

@@ -10,6 +10,15 @@ import {
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
 import { Button } from "@/components/ui/button";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { MobileNav } from "@/components/landing/MobileNav";
+import { NAV_LINKS } from "@/components/landing/nav-links";
 import { Reveal } from "@/components/landing/Reveal";
 import { HeroBackground } from "@/components/landing/HeroBackground";
 
@@ -91,39 +100,55 @@ export default async function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="/icon-192x192.png"
-              alt="Cataloo"
-              width={32}
-              height={32}
-              priority
-              className="h-8 w-8 rounded-lg shadow-sm shadow-blue-600/20"
-            />
-            <span className="text-xl font-bold tracking-tight">Cataloo</span>
-          </Link>
-          <nav className="flex items-center gap-2">
-            {user ? (
-              <Button asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" asChild className="hidden sm:inline-flex">
-                  <Link href="#pricing">Pricing</Link>
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/icon-192x192.png"
+                alt="Cataloo"
+                width={32}
+                height={32}
+                priority
+                className="h-8 w-8 rounded-lg shadow-sm shadow-blue-600/20"
+              />
+              <span className="text-xl font-bold tracking-tight">Cataloo</span>
+            </Link>
+            <NavigationMenu className="hidden md:flex">
+              <NavigationMenuList>
+                {NAV_LINKS.map((link) => (
+                  <NavigationMenuItem key={link.href}>
+                    <NavigationMenuLink
+                      asChild
+                      className={`${navigationMenuTriggerStyle()} bg-transparent`}
+                    >
+                      <Link href={link.href}>{link.label}</Link>
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                ))}
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
+          <div className="flex items-center gap-2">
+            <nav className="hidden items-center gap-2 md:flex">
+              {user ? (
+                <Button asChild>
+                  <Link href="/dashboard">Dashboard</Link>
                 </Button>
-                <Button variant="ghost" asChild>
-                  <Link href="/login">Log in</Link>
-                </Button>
-                <Button
-                  asChild
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
-                >
-                  <Link href="/signup">Get started</Link>
-                </Button>
-              </>
-            )}
-          </nav>
+              ) : (
+                <>
+                  <Button variant="ghost" asChild>
+                    <Link href="/login">Log in</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
+                  >
+                    <Link href="/signup">Get started</Link>
+                  </Button>
+                </>
+              )}
+            </nav>
+            <MobileNav isLoggedIn={!!user} />
+          </div>
         </div>
       </header>
 
@@ -220,7 +245,10 @@ export default async function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="bg-gradient-to-b from-white to-gray-50/60 py-24">
+      <section
+        id="features"
+        className="scroll-mt-20 bg-gradient-to-b from-white to-gray-50/60 py-24"
+      >
         <div className="mx-auto max-w-6xl px-6">
           <Reveal className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -251,7 +279,7 @@ export default async function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="mx-auto w-full max-w-6xl px-6 py-24">
+      <section id="how" className="mx-auto w-full max-w-6xl scroll-mt-20 px-6 py-24">
         <Reveal className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             How it works
@@ -477,7 +505,7 @@ export default async function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto w-full max-w-3xl px-6 py-24">
+      <section id="faq" className="mx-auto w-full max-w-3xl scroll-mt-20 px-6 py-24">
         <Reveal className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Frequently asked questions

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ExportButton } from "@/components/catalog/ExportButton";
-import { BackLink } from "@/components/dashboard/BackLink";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -165,7 +164,6 @@ export function ItemsManager({
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <BackLink href="/dashboard" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
               Items

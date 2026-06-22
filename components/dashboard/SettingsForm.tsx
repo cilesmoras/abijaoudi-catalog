@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { BackLink } from "@/components/dashboard/BackLink";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { updateProfile, type ProfileInput } from "@/lib/api-client";
 import type { Profile } from "@/lib/types";
@@ -19,7 +18,6 @@ export function SettingsForm({ profile }: { profile: Profile }) {
   return (
     <>
       <div className="mb-6 flex items-center gap-3">
-        <BackLink href="/dashboard" />
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             Catalog settings

@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BackLink } from "@/components/dashboard/BackLink";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -65,7 +64,6 @@ export function CategoriesManager() {
   return (
     <>
       <div className="mb-6 flex items-center gap-3">
-        <BackLink href="/dashboard" />
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             Categories
