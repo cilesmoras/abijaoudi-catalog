@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cataloo",
-  description: "Manage and export your supermarket product catalog.",
+  title: "Cataloo | Show it. Share it. Sell it.",
+  description: "Manage and export your product catalog.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
