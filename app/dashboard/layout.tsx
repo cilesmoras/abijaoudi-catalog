@@ -14,7 +14,11 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar handle={profile.handle} plan={profile.plan} />
+      <AppSidebar
+        handle={profile.handle}
+        plan={profile.plan}
+        email={profile.contact_email}
+      />
       <div className="flex min-h-svh flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-gray-200/70 bg-white/70 px-4 backdrop-blur-xl">
           <SidebarTrigger className="text-gray-700" />

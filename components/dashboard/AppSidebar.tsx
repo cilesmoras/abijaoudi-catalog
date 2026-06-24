@@ -14,6 +14,7 @@ import {
 import type { Plan } from "@/lib/types";
 import { isPro } from "@/lib/plans";
 import { LogoutButton } from "@/components/admin/LogoutButton";
+import { FeedbackDialog } from "@/components/dashboard/FeedbackDialog";
 import {
   Sidebar,
   SidebarContent,
@@ -37,9 +38,11 @@ const navItems = [
 export function AppSidebar({
   handle,
   plan,
+  email,
 }: {
   handle: string;
   plan: Plan;
+  email?: string | null;
 }) {
   const pathname = usePathname();
   const pro = isPro(plan);
@@ -102,6 +105,9 @@ export function AppSidebar({
                   <span>View public catalog</span>
                 </a>
               </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <FeedbackDialog defaultEmail={email ?? null} />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

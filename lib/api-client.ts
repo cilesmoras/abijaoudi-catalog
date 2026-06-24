@@ -69,6 +69,17 @@ export function deleteCategory(id: string): Promise<void> {
   ) as Promise<void>;
 }
 
+export function submitFeedback(input: {
+  email: string | null;
+  message: string;
+}): Promise<{ success: true }> {
+  return fetch("/api/feedback", {
+    method: "POST",
+    headers: json,
+    body: JSON.stringify(input),
+  }).then((r) => parse<{ success: true }>(r));
+}
+
 export type ProfileInput = {
   handle: string;
   catalog_name: string;
