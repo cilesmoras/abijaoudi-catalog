@@ -2,12 +2,14 @@ import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 import sharp from "sharp";
 import { getCurrentProfile } from "@/lib/dal";
+import { canUploadFullQuality } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
 // Longest-edge sizes (px). Catalog image is kept small to keep PDF exports light.
 const CATALOG_MAX = 200; // catalog page + embedded in the exported PDF
 const THUMB_MAX = 80; // displayed ~40px in the admin items table
+const FULL_MAX = 1600; // Pro: full-quality variant shown in the public lightbox
 
 const bucketName = "item-images";
 
@@ -34,6 +36,10 @@ export async function POST(request: NextRequest) {
   if (!file) {
     return Response.json({ error: "No file provided" }, { status: 400 });
   }
+
+  // Item photo uploads request a full-quality variant; only honored for Pro.
+  const wantFull =
+    formData.get("full") === "1" && canUploadFullQuality(profile.plan);
 
   const inputBuffer = Buffer.from(await file.arrayBuffer());
 
@@ -102,8 +108,29 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: thumbUpload.error }, { status: 500 });
   }
 
+  // Pro: also store a large, lightly-compressed variant for the lightbox.
+  let fullUrl: string | undefined;
+  if (wantFull) {
+    try {
+      const fullBuffer = await sharp(inputBuffer)
+        .rotate()
+        .resize({
+          width: FULL_MAX,
+          height: FULL_MAX,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      const fullUpload = await uploadJpeg(`${base}-full.jpg`, fullBuffer);
+      if (!("error" in fullUpload)) fullUrl = fullUpload.url;
+    } catch {
+      // Fall back to the compressed variant if the full render/upload fails.
+    }
+  }
+
   return Response.json(
-    { url: catalogUpload.url, thumbnailUrl: thumbUpload.url },
+    { url: catalogUpload.url, thumbnailUrl: thumbUpload.url, fullUrl },
     { status: 201 },
   );
 }

@@ -8,6 +8,7 @@ import {
   getItemForOwner,
   getItemsForOwner,
 } from "@/lib/queries";
+import { syncItemImages } from "@/lib/item-images";
 import { canCreateItem, FREE_ITEM_LIMIT } from "@/lib/plans";
 
 export const runtime = "nodejs";
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
     category_id,
     image_url,
     thumbnail_url,
+    images,
   } = body;
 
   if (!name || price === undefined) {
@@ -72,6 +74,8 @@ export async function POST(request: NextRequest) {
       thumbnailUrl: thumbnail_url || null,
     })
     .returning({ id: items.id });
+
+  await syncItemImages(profile.id, created.id, profile.plan, images);
 
   const item = await getItemForOwner(profile.id, created.id);
   return Response.json(item, { status: 201 });

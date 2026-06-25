@@ -33,7 +33,13 @@ function mapProfile(row: typeof profiles.$inferSelect): Profile {
     address: row.address,
     currency: row.currency,
     plan: row.plan === "pro" ? "pro" : "free",
+    upgrade_requested_at: row.upgradeRequestedAt
+      ? row.upgradeRequestedAt.toISOString()
+      : null,
     logo_url: row.logoUrl,
+    facebook_url: row.facebookUrl,
+    instagram_url: row.instagramUrl,
+    tiktok_url: row.tiktokUrl,
     offers_delivery: row.offersDelivery,
     offers_pickup: row.offersPickup,
     delivery_payment_upfront: row.deliveryPaymentUpfront,

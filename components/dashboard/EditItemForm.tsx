@@ -6,9 +6,15 @@ import { toast } from "sonner";
 import { ItemForm, type ItemFormValues } from "@/components/admin/ItemForm";
 import { BackLink } from "@/components/dashboard/BackLink";
 import { fetchCategories, fetchItem, updateItem } from "@/lib/api-client";
-import type { Category, Item } from "@/lib/types";
+import type { Category, Item, Plan } from "@/lib/types";
 
-export function EditItemForm({ itemId }: { itemId: string }) {
+export function EditItemForm({
+  itemId,
+  plan,
+}: {
+  itemId: string;
+  plan: Plan;
+}) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [item, setItem] = useState<Item | null>(null);
@@ -64,6 +70,7 @@ export function EditItemForm({ itemId }: { itemId: string }) {
       {!loading && item ? (
         <ItemForm
           categories={categories}
+          plan={plan}
           initialValues={{
             name: item.name,
             description: item.description,
@@ -72,6 +79,7 @@ export function EditItemForm({ itemId }: { itemId: string }) {
             category_id: item.category_id,
             image_url: item.image_url,
             thumbnail_url: item.thumbnail_url,
+            images: item.images,
           }}
           submitLabel="Save changes"
           submitting={submitting}

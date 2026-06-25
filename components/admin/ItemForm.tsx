@@ -12,9 +12,17 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createCategory } from "@/lib/api-client";
-import type { Category } from "@/lib/types";
+import type { Category, ItemImage, Plan } from "@/lib/types";
+import { isPro } from "@/lib/plans";
 import { getItemImageSrc } from "@/lib/utils";
+import { ArrowDown, ArrowUp, Star, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
+
+export type ItemImageValue = {
+  url: string;
+  thumbnail_url: string | null;
+  sort_order: number;
+};
 
 export type ItemFormValues = {
   name: string;
@@ -24,15 +32,26 @@ export type ItemFormValues = {
   category_id: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
+  images?: ItemImageValue[] | null;
 };
 
 interface ItemFormProps {
   categories: Category[];
-  initialValues?: Partial<ItemFormValues>;
+  initialValues?: Partial<ItemFormValues> & { images?: ItemImage[] | null };
   submitLabel: string;
   submitting: boolean;
+  /** Pro unlocks multiple, full-quality photos. Defaults to "free". */
+  plan?: Plan;
   onSubmit: (values: ItemFormValues) => Promise<void>;
 }
+
+// A photo in the Pro gallery editor. `coverUrl` is the compressed variant shown
+// in the grid/PDF; `fullUrl` is the full-quality variant for the lightbox.
+type Photo = {
+  coverUrl: string;
+  thumbUrl: string | null;
+  fullUrl: string | null;
+};
 
 const EMPTY_CATEGORY = "__none__";
 
@@ -41,8 +60,10 @@ export function ItemForm({
   initialValues,
   submitLabel,
   submitting,
+  plan = "free",
   onSubmit,
 }: ItemFormProps) {
+  const pro = isPro(plan);
   const [name, setName] = useState(initialValues?.name ?? "");
   const [description, setDescription] = useState(
     initialValues?.description ?? "",
@@ -64,6 +85,84 @@ export function ItemForm({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pro gallery editor. Seeded from saved gallery photos, or the cover alone.
+  const [photos, setPhotos] = useState<Photo[]>(() => {
+    const saved = initialValues?.images;
+    if (saved && saved.length > 0) {
+      return [...saved]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((image) => ({
+          coverUrl: image.thumbnail_url ?? image.url,
+          thumbUrl: image.thumbnail_url,
+          fullUrl: image.url,
+        }));
+    }
+    if (initialValues?.image_url) {
+      return [
+        {
+          coverUrl: initialValues.image_url,
+          thumbUrl: initialValues.thumbnail_url ?? null,
+          fullUrl: initialValues.image_url,
+        },
+      ];
+    }
+    return [];
+  });
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
+  async function handleAddPhotos(files: FileList) {
+    setUploadingPhotos(true);
+    setError(null);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("full", "1");
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          throw new Error(payload?.error ?? "Photo upload failed");
+        }
+        const payload = (await response.json()) as {
+          url: string;
+          thumbnailUrl: string;
+          fullUrl?: string;
+        };
+        setPhotos((current) => [
+          ...current,
+          {
+            coverUrl: payload.url,
+            thumbUrl: payload.thumbnailUrl,
+            fullUrl: payload.fullUrl ?? null,
+          },
+        ]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Photo upload failed");
+    } finally {
+      setUploadingPhotos(false);
+    }
+  }
+
+  function movePhoto(index: number, direction: -1 | 1) {
+    setPhotos((current) => {
+      const next = [...current];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return current;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((current) => current.filter((_, i) => i !== index));
+  }
 
   // useEffect(() => {
   //   setName(initialValues?.name ?? "");
@@ -168,6 +267,32 @@ export function ItemForm({
       return;
     }
 
+    const base = {
+      name: name.trim(),
+      description: description.trim() ? description.trim() : null,
+      price: parsedPrice,
+      unit: unit.trim() ? unit.trim() : null,
+      category_id: categoryId,
+    };
+
+    // Pro: the gallery is the source of truth; the first photo is the cover
+    // (compressed for the grid/PDF), and every photo is stored full-quality.
+    if (pro) {
+      const cover = photos[0] ?? null;
+      await onSubmit({
+        ...base,
+        image_url: cover?.coverUrl ?? null,
+        thumbnail_url: cover?.thumbUrl ?? null,
+        images: photos.map((photo, index) => ({
+          url: photo.fullUrl ?? photo.coverUrl,
+          thumbnail_url: photo.coverUrl,
+          sort_order: index,
+        })),
+      });
+      return;
+    }
+
+    // Free: a single compressed cover, uploaded on submit.
     let finalImageUrl = imageUrl.trim() ? imageUrl.trim() : null;
     let finalThumbnailUrl = thumbnailUrl.trim() ? thumbnailUrl.trim() : null;
 
@@ -192,13 +317,10 @@ export function ItemForm({
     }
 
     await onSubmit({
-      name: name.trim(),
-      description: description.trim() ? description.trim() : null,
-      price: parsedPrice,
-      unit: unit.trim() ? unit.trim() : null,
-      category_id: categoryId,
+      ...base,
       image_url: finalImageUrl,
       thumbnail_url: finalThumbnailUrl,
+      images: null,
     });
   }
 
@@ -321,40 +443,121 @@ export function ItemForm({
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="image">Product image</Label>
-        <Input
-          id="image"
-          type="file"
-          accept="image/*"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) {
-              setError(null);
-              setSelectedFile(file);
-              const nextPreviewUrl = URL.createObjectURL(file);
-              setPreviewUrl((current) => {
-                if (current) URL.revokeObjectURL(current);
-                return nextPreviewUrl;
-              });
-            }
-          }}
-        />
-        <img
-          src={displayImageUrl}
-          alt="Uploaded preview"
-          className="h-28 w-28 rounded-md border object-cover"
-        />
-        {uploadingImage ? (
-          <p className="text-sm text-gray-500">Uploading image…</p>
-        ) : null}
-      </div>
+      {pro ? (
+        <div className="space-y-2">
+          <Label htmlFor="photos">Photos</Label>
+          <p className="text-xs text-gray-500">
+            Add multiple full-quality photos. The first is the cover shown in
+            your catalog grid and PDF; all photos appear in the gallery.
+          </p>
+          {photos.length > 0 ? (
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {photos.map((photo, index) => (
+                <li
+                  key={`${photo.coverUrl}-${index}`}
+                  className="relative overflow-hidden rounded-md border"
+                >
+                  <img
+                    src={photo.coverUrl}
+                    alt={`Photo ${index + 1}`}
+                    className="aspect-square w-full object-cover"
+                  />
+                  {index === 0 ? (
+                    <span className="absolute left-1 top-1 inline-flex items-center gap-1 rounded bg-blue-600/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      <Star className="h-3 w-3" />
+                      Cover
+                    </span>
+                  ) : null}
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/40 px-1 py-0.5">
+                    <div className="flex gap-0.5">
+                      <button
+                        type="button"
+                        aria-label="Move left"
+                        onClick={() => movePhoto(index, -1)}
+                        disabled={index === 0}
+                        className="rounded p-0.5 text-white disabled:opacity-30"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5 -rotate-90" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Move right"
+                        onClick={() => movePhoto(index, 1)}
+                        disabled={index === photos.length - 1}
+                        className="rounded p-0.5 text-white disabled:opacity-30"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5 -rotate-90" />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Remove photo"
+                      onClick={() => removePhoto(index)}
+                      className="rounded p-0.5 text-white hover:text-red-300"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <Input
+            id="photos"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(event) => {
+              const files = event.target.files;
+              if (files && files.length > 0) {
+                void handleAddPhotos(files);
+              }
+              event.target.value = "";
+            }}
+          />
+          {uploadingPhotos ? (
+            <p className="text-sm text-gray-500">Uploading photos…</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="image">Product image</Label>
+          <Input
+            id="image"
+            type="file"
+            accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                setError(null);
+                setSelectedFile(file);
+                const nextPreviewUrl = URL.createObjectURL(file);
+                setPreviewUrl((current) => {
+                  if (current) URL.revokeObjectURL(current);
+                  return nextPreviewUrl;
+                });
+              }
+            }}
+          />
+          <img
+            src={displayImageUrl}
+            alt="Uploaded preview"
+            className="h-28 w-28 rounded-md border object-cover"
+          />
+          {uploadingImage ? (
+            <p className="text-sm text-gray-500">Uploading image…</p>
+          ) : null}
+        </div>
+      )}
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <Button type="submit" disabled={submitting || uploadingImage}>
-        {uploadingImage
-          ? "Uploading image…"
+      <Button
+        type="submit"
+        disabled={submitting || uploadingImage || uploadingPhotos}
+      >
+        {uploadingImage || uploadingPhotos
+          ? "Uploading…"
           : submitting
             ? "Saving…"
             : submitLabel}

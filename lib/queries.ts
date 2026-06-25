@@ -1,9 +1,9 @@
 import "server-only";
 
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { categories, items, profiles } from "@/lib/db/schema";
-import type { Category, Item, Profile } from "@/lib/types";
+import { categories, itemImages, items, profiles } from "@/lib/db/schema";
+import type { Category, Item, ItemImage, Plan, Profile } from "@/lib/types";
 
 function toIsoString(value: string | Date) {
   return value instanceof Date
@@ -100,7 +100,13 @@ export function mapProfileRow(row: typeof profiles.$inferSelect): Profile {
     address: row.address,
     currency: row.currency,
     plan: row.plan === "pro" ? "pro" : "free",
+    upgrade_requested_at: row.upgradeRequestedAt
+      ? toIsoString(row.upgradeRequestedAt)
+      : null,
     logo_url: row.logoUrl,
+    facebook_url: row.facebookUrl,
+    instagram_url: row.instagramUrl,
+    tiktok_url: row.tiktokUrl,
     offers_delivery: row.offersDelivery,
     offers_pickup: row.offersPickup,
     delivery_payment_upfront: row.deliveryPaymentUpfront,
@@ -111,6 +117,37 @@ export function mapProfileRow(row: typeof profiles.$inferSelect): Profile {
   };
 }
 
+/** Loads gallery photos for the given items and attaches them, sorted. */
+async function attachImages(rows: Item[]): Promise<Item[]> {
+  if (rows.length === 0) return rows;
+  const ids = rows.map((row) => row.id);
+  const imageRows = await db
+    .select({
+      id: itemImages.id,
+      item_id: itemImages.itemId,
+      url: itemImages.url,
+      thumbnail_url: itemImages.thumbnailUrl,
+      sort_order: itemImages.sortOrder,
+    })
+    .from(itemImages)
+    .where(inArray(itemImages.itemId, ids))
+    .orderBy(asc(itemImages.sortOrder));
+
+  const byItem = new Map<string, ItemImage[]>();
+  for (const image of imageRows) {
+    const list = byItem.get(image.item_id) ?? [];
+    list.push({
+      id: image.id,
+      url: image.url,
+      thumbnail_url: image.thumbnail_url,
+      sort_order: Number(image.sort_order),
+    });
+    byItem.set(image.item_id, list);
+  }
+
+  return rows.map((row) => ({ ...row, images: byItem.get(row.id) ?? [] }));
+}
+
 export async function getItemsForOwner(ownerId: string): Promise<Item[]> {
   const rows = await db
     .select(itemSelection)
@@ -118,7 +155,7 @@ export async function getItemsForOwner(ownerId: string): Promise<Item[]> {
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(eq(items.ownerId, ownerId))
     .orderBy(asc(items.name));
-  return rows.map(mapItemRow);
+  return attachImages(rows.map(mapItemRow));
 }
 
 /** Total item count for an owner — used to enforce the Free plan item limit. */
@@ -138,7 +175,7 @@ export async function getVisibleItemsForOwner(ownerId: string): Promise<Item[]> 
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(and(eq(items.ownerId, ownerId), eq(items.hidden, false)))
     .orderBy(asc(items.name));
-  return rows.map(mapItemRow);
+  return attachImages(rows.map(mapItemRow));
 }
 
 export async function getItemForOwner(
@@ -150,7 +187,9 @@ export async function getItemForOwner(
     .from(items)
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(and(eq(items.id, id), eq(items.ownerId, ownerId)));
-  return row ? mapItemRow(row) : null;
+  if (!row) return null;
+  const [withImages] = await attachImages([mapItemRow(row)]);
+  return withImages;
 }
 
 export async function getCategoriesForOwner(
@@ -175,6 +214,108 @@ export async function categoryBelongsToOwner(
     .where(and(eq(categories.id, categoryId), eq(categories.ownerId, ownerId)))
     .limit(1);
   return Boolean(row);
+}
+
+export type AdminUserRow = {
+  id: string;
+  handle: string;
+  catalog_name: string;
+  email: string | null;
+  plan: Plan;
+  upgrade_requested_at: string | null;
+  created_at: string;
+};
+
+/**
+ * All profiles with their Supabase auth email, for the admin users page.
+ * Pending upgrade requests sort first. Uses a raw join because auth.users is
+ * outside Drizzle's public schema.
+ */
+export async function listAllProfilesForAdmin(): Promise<AdminUserRow[]> {
+  const rows = await db.execute<{
+    id: string;
+    handle: string;
+    catalog_name: string;
+    email: string | null;
+    plan: string;
+    upgrade_requested_at: Date | string | null;
+    created_at: Date | string;
+  }>(sql`
+    SELECT p.id, p.handle, p.catalog_name, u.email, p.plan,
+           p.upgrade_requested_at, p.created_at
+    FROM profiles p
+    LEFT JOIN auth.users u ON u.id = p.id
+    ORDER BY (p.upgrade_requested_at IS NOT NULL) DESC,
+             p.upgrade_requested_at DESC NULLS LAST,
+             p.created_at DESC
+  `);
+
+  return rows.map((row) => ({
+    id: row.id,
+    handle: row.handle,
+    catalog_name: row.catalog_name,
+    email: row.email,
+    plan: row.plan === "pro" ? "pro" : "free",
+    upgrade_requested_at: row.upgrade_requested_at
+      ? toIsoString(row.upgrade_requested_at)
+      : null,
+    created_at: toIsoString(row.created_at),
+  }));
+}
+
+export type CatalogAnalytics = {
+  totalViews: number;
+  totalOpens: number;
+  viewsByDay: { day: string; views: number }[];
+  topItems: { id: string; name: string; opens: number }[];
+};
+
+/** Pro analytics for the last 30 days: views, item opens, and top items. */
+export async function getCatalogAnalytics(
+  ownerId: string,
+): Promise<CatalogAnalytics> {
+  const totals = await db.execute<{ type: string; count: number }>(sql`
+    SELECT type, count(*)::int AS count
+    FROM catalog_events
+    WHERE owner_id = ${ownerId} AND created_at >= now() - interval '30 days'
+    GROUP BY type
+  `);
+  const totalViews =
+    totals.find((row) => row.type === "view")?.count ?? 0;
+  const totalOpens =
+    totals.find((row) => row.type === "item_open")?.count ?? 0;
+
+  const byDay = await db.execute<{ day: string; views: number }>(sql`
+    SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day,
+           count(*)::int AS views
+    FROM catalog_events
+    WHERE owner_id = ${ownerId} AND type = 'view'
+      AND created_at >= now() - interval '30 days'
+    GROUP BY 1
+    ORDER BY 1
+  `);
+
+  const top = await db.execute<{ id: string; name: string; opens: number }>(sql`
+    SELECT i.id, i.name, count(*)::int AS opens
+    FROM catalog_events e
+    JOIN items i ON i.id = e.item_id
+    WHERE e.owner_id = ${ownerId} AND e.type = 'item_open'
+      AND e.created_at >= now() - interval '30 days'
+    GROUP BY i.id, i.name
+    ORDER BY opens DESC
+    LIMIT 10
+  `);
+
+  return {
+    totalViews,
+    totalOpens,
+    viewsByDay: byDay.map((row) => ({ day: row.day, views: row.views })),
+    topItems: top.map((row) => ({
+      id: row.id,
+      name: row.name,
+      opens: row.opens,
+    })),
+  };
 }
 
 export async function getProfileByHandle(

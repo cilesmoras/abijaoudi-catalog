@@ -2,9 +2,10 @@ import { NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getCurrentProfile } from "@/lib/dal";
 import { db } from "@/lib/db";
-import { items } from "@/lib/db/schema";
+import { itemImages, items } from "@/lib/db/schema";
 import { deleteItemImages } from "@/lib/storage";
 import { categoryBelongsToOwner, getItemForOwner } from "@/lib/queries";
+import { syncItemImages } from "@/lib/item-images";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,7 @@ export async function PUT(
     category_id,
     image_url,
     thumbnail_url,
+    images,
   } = body;
 
   if (category_id && !(await categoryBelongsToOwner(profile.id, category_id))) {
@@ -64,6 +66,8 @@ export async function PUT(
 
   if (!updated)
     return Response.json({ error: "Item not found" }, { status: 404 });
+
+  await syncItemImages(profile.id, id, profile.plan, images);
 
   const item = await getItemForOwner(profile.id, id);
   return Response.json(item);
@@ -119,10 +123,21 @@ export async function DELETE(
     return Response.json({ error: "Item not found" }, { status: 404 });
   }
 
+  // Gather gallery photo files too (the rows cascade-delete, but their storage
+  // objects don't) so we can clean them up best-effort after deleting the item.
+  const galleryRows = await db
+    .select({ url: itemImages.url, thumbnailUrl: itemImages.thumbnailUrl })
+    .from(itemImages)
+    .where(eq(itemImages.itemId, id));
+
   await db
     .delete(items)
     .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
-  await deleteItemImages(item.imageUrl, item.thumbnailUrl);
+  await deleteItemImages(
+    item.imageUrl,
+    item.thumbnailUrl,
+    ...galleryRows.flatMap((row) => [row.url, row.thumbnailUrl]),
+  );
 
   return Response.json({ success: true });
 }

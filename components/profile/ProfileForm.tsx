@@ -26,6 +26,9 @@ export type ProfileFormValues = {
   delivery_payment_cod: boolean;
   delivery_fee: string;
   logo_url: string;
+  facebook_url: string;
+  instagram_url: string;
+  tiktok_url: string;
 };
 
 interface ProfileFormProps {
@@ -74,6 +77,13 @@ export function ProfileForm({
   const [deliveryFee, setDeliveryFee] = useState(
     initialValues?.delivery_fee ?? "",
   );
+  const [facebookUrl, setFacebookUrl] = useState(
+    initialValues?.facebook_url ?? "",
+  );
+  const [instagramUrl, setInstagramUrl] = useState(
+    initialValues?.instagram_url ?? "",
+  );
+  const [tiktokUrl, setTiktokUrl] = useState(initialValues?.tiktok_url ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,6 +119,9 @@ export function ProfileForm({
             ? Number(deliveryFee)
             : null,
         logo_url: logoUrl.trim() || null,
+        facebook_url: facebookUrl.trim() || null,
+        instagram_url: instagramUrl.trim() || null,
+        tiktok_url: tiktokUrl.trim() || null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -175,8 +188,8 @@ export function ProfileForm({
           ) : (
             <p className="text-xs text-gray-500">
               A custom link is a{" "}
-              <span className="font-medium text-blue-600">Pro</span> feature
-              (coming soon). Your Free catalog keeps this auto-generated link.
+              <span className="font-medium text-blue-600">Pro</span> feature.
+              Your Free catalog keeps this auto-generated link.
             </p>
           )}
         </div>
@@ -205,6 +218,50 @@ export function ProfileForm({
               ? "Uploading…"
               : "Shown on your exported PDF in place of the Cataloo branding."}
           </p>
+        </div>
+      ) : null}
+
+      {isPro(plan) ? (
+        <div className="space-y-3 rounded-md border p-4">
+          <div>
+            <p className="text-sm font-medium text-gray-900">Social media</p>
+            <p className="text-xs text-gray-500">
+              Linked from your public catalog and shown on PDF exports.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="facebook_url">Facebook</Label>
+            <Input
+              id="facebook_url"
+              type="url"
+              inputMode="url"
+              value={facebookUrl}
+              onChange={(event) => setFacebookUrl(event.target.value)}
+              placeholder="https://facebook.com/yourpage"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="instagram_url">Instagram</Label>
+            <Input
+              id="instagram_url"
+              type="url"
+              inputMode="url"
+              value={instagramUrl}
+              onChange={(event) => setInstagramUrl(event.target.value)}
+              placeholder="https://instagram.com/yourhandle"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tiktok_url">TikTok</Label>
+            <Input
+              id="tiktok_url"
+              type="url"
+              inputMode="url"
+              value={tiktokUrl}
+              onChange={(event) => setTiktokUrl(event.target.value)}
+              placeholder="https://tiktok.com/@yourhandle"
+            />
+          </div>
         </div>
       ) : null}
 

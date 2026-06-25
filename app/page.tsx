@@ -58,7 +58,7 @@ const steps = [
 const faqs = [
   {
     q: "Is Cataloo free?",
-    a: "Yes — Cataloo is free to use, with generous limits. A Pro plan with unlimited catalogs and items, multiple photos, a custom link, and more is coming soon.",
+    a: "Yes — Cataloo is free to use, with generous limits. A Pro plan with unlimited items, multiple photos, a custom link, analytics, and more is available — contact us to upgrade.",
   },
   {
     q: "Do my customers need an account?",
@@ -71,8 +71,7 @@ const faqs = [
 ];
 
 const planComparison = [
-  { feature: "Catalogs", free: "1", pro: "Unlimited" },
-  { feature: "Items per catalog", free: "30", pro: "Unlimited" },
+  { feature: "Items", free: "30", pro: "Unlimited" },
   { feature: "Photos per item", free: "1, compressed", pro: "Multiple, full quality" },
   {
     feature: "Public share link",
@@ -355,8 +354,8 @@ export default async function LandingPage() {
               Simple, honest pricing
             </h2>
             <p className="mt-4 text-gray-600">
-              Start free with everything you need. Pro is on the way for sellers
-              who want more.
+              Start free with everything you need. Upgrade to Pro when you want
+              more.
             </p>
           </Reveal>
 
@@ -400,19 +399,21 @@ export default async function LandingPage() {
                 <p className="text-sm font-semibold text-gray-900">Pro</p>
                 <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
                   <Sparkles className="h-3 w-3" />
-                  Coming soon
+                  Available now
                 </span>
               </div>
               <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
-                $9
+                $7
                 <span className="ml-1 text-sm font-medium text-gray-500">/mo</span>
               </p>
-              <p className="text-xs text-gray-500">or $79/yr · ~2 months free</p>
+              <p className="text-xs text-gray-500">or $70/yr · ~2 months free</p>
               <Button
-                disabled
-                className="mt-5 w-full cursor-not-allowed bg-gray-200 text-gray-500 hover:bg-gray-200"
+                asChild
+                className="mt-5 w-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
               >
-                Coming soon
+                <Link href={user ? "/dashboard" : "/signup"}>
+                  Contact to upgrade
+                </Link>
               </Button>
               <ul className="mt-6 space-y-3 border-t border-blue-100 pt-5">
                 {planComparison.map((row) => (
@@ -446,15 +447,15 @@ export default async function LandingPage() {
                 <div className="relative border-b border-l border-gray-200/80 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 p-4 text-center sm:p-6">
                   <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
                     <Sparkles className="h-3 w-3" />
-                    Coming soon
+                    Available now
                   </span>
                   <p className="mt-2 text-sm font-semibold text-gray-900">Pro</p>
                   <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-                    $9
+                    $7
                     <span className="text-sm font-medium text-gray-500">/mo</span>
                   </p>
                   <p className="text-xs text-gray-500">
-                    or $79/yr · ~2 months free
+                    or $70/yr · ~2 months free
                   </p>
                 </div>
               </div>
@@ -492,10 +493,12 @@ export default async function LandingPage() {
                 </div>
                 <div className="hidden border-l border-gray-200/80 bg-blue-50/30 p-6 sm:block">
                   <Button
-                    disabled
-                    className="w-full cursor-not-allowed bg-gray-200 text-gray-500 hover:bg-gray-200"
+                    asChild
+                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
                   >
-                    Coming soon
+                    <Link href={user ? "/dashboard" : "/signup"}>
+                      Contact to upgrade
+                    </Link>
                   </Button>
                 </div>
               </div>

@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { ItemForm, type ItemFormValues } from "@/components/admin/ItemForm";
 import { BackLink } from "@/components/dashboard/BackLink";
 import { createItem, fetchCategories } from "@/lib/api-client";
-import type { Category } from "@/lib/types";
+import type { Category, Plan } from "@/lib/types";
 
-export function NewItemForm() {
+export function NewItemForm({ plan }: { plan: Plan }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -43,6 +43,7 @@ export function NewItemForm() {
       <ItemForm
         key={formKey}
         categories={categories}
+        plan={plan}
         submitLabel="Create item"
         submitting={submitting}
         onSubmit={handleSubmit}

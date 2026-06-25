@@ -10,6 +10,12 @@ export default async function DashboardItemsPage() {
         currency={profile.currency}
         plan={profile.plan}
         logoUrl={profile.logo_url}
+        socials={{
+          facebook: profile.facebook_url,
+          instagram: profile.instagram_url,
+          tiktok: profile.tiktok_url,
+        }}
+        upgradeRequested={Boolean(profile.upgrade_requested_at)}
       />
     </main>
   );

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ExportButton } from "@/components/catalog/ExportButton";
+import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,11 +34,19 @@ export function ItemsManager({
   currency,
   plan,
   logoUrl,
+  socials,
+  upgradeRequested = false,
 }: {
   catalogName: string;
   currency: string | null;
   plan: Plan;
   logoUrl: string | null;
+  socials?: {
+    facebook: string | null;
+    instagram: string | null;
+    tiktok: string | null;
+  };
+  upgradeRequested?: boolean;
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -187,6 +196,7 @@ export function ItemsManager({
             currency={currency}
             plan={plan}
             logoUrl={logoUrl}
+            socials={socials}
             disabled={selectedItems.length === 0}
           />
           {atLimit ? (
@@ -202,11 +212,13 @@ export function ItemsManager({
       </div>
 
       {atLimit ? (
-        <p className="mb-4 text-sm text-amber-600">
+        <p className="mb-4 inline-flex flex-wrap items-center gap-1 text-sm text-amber-600">
           You&apos;ve reached the Free plan limit of {FREE_ITEM_LIMIT} items.{" "}
-          <Link href="/#pricing" className="font-medium underline">
-            Upgrade to Pro
-          </Link>{" "}
+          <RequestUpgradeButton
+            alreadyRequested={upgradeRequested}
+            className="font-medium text-amber-700 underline disabled:opacity-60"
+            requestedClassName="font-medium text-emerald-600"
+          />{" "}
           for unlimited items.
         </p>
       ) : null}

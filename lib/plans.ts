@@ -23,6 +23,16 @@ export function canUseCustomHandle(plan: Plan): boolean {
   return isPro(plan);
 }
 
+/** Max photos per item (Free is a single compressed cover; Pro is unlimited). */
+export function photoLimitFor(plan: Plan): number {
+  return isPro(plan) ? Infinity : 1;
+}
+
+/** Pro keeps a larger full-quality image variant; Free is compressed only. */
+export function canUploadFullQuality(plan: Plan): boolean {
+  return isPro(plan);
+}
+
 /** The "Made with Cataloo" badge shows on Free catalogs only. */
 export function showBadge(plan: Plan): boolean {
   return !isPro(plan);

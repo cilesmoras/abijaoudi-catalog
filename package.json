@@ -15,6 +15,7 @@
     "db:migrate:currency": "node scripts/add-profile-currency.mjs",
     "db:migrate:unit": "node scripts/add-item-unit.mjs",
     "db:migrate:plan": "node scripts/add-profile-plan.mjs",
+    "db:migrate:pro": "node scripts/add-pro-features.mjs",
     "set-plan": "node scripts/set-plan.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"

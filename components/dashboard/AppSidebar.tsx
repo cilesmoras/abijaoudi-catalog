@@ -4,10 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   ExternalLink,
   LayoutDashboard,
   Package,
   Settings,
+  Shield,
   Tags,
 } from "lucide-react";
 
@@ -15,6 +17,7 @@ import type { Plan } from "@/lib/types";
 import { isPro } from "@/lib/plans";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { FeedbackDialog } from "@/components/dashboard/FeedbackDialog";
+import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +35,7 @@ const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Items", href: "/dashboard/items", icon: Package },
   { title: "Categories", href: "/dashboard/categories", icon: Tags },
+  { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
@@ -39,10 +43,14 @@ export function AppSidebar({
   handle,
   plan,
   email,
+  isAdmin = false,
+  upgradeRequested = false,
 }: {
   handle: string;
   plan: Plan;
   email?: string | null;
+  isAdmin?: boolean;
+  upgradeRequested?: boolean;
 }) {
   const pathname = usePathname();
   const pro = isPro(plan);
@@ -93,6 +101,20 @@ export function AppSidebar({
                 </SidebarMenuItem>
               );
             })}
+            {isAdmin ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith("/dashboard/admin")}
+                  tooltip="Admin"
+                >
+                  <Link href="/dashboard/admin">
+                    <Shield />
+                    <span>Admin</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
           </SidebarMenu>
         </SidebarGroup>
 
@@ -125,12 +147,11 @@ export function AppSidebar({
             {pro ? "Pro plan" : "Free plan"}
           </span>
           {!pro ? (
-            <Link
-              href="/#pricing"
-              className="px-0.5 text-xs font-medium text-blue-600 hover:underline"
-            >
-              Upgrade to Pro
-            </Link>
+            <RequestUpgradeButton
+              alreadyRequested={upgradeRequested}
+              className="w-fit px-0.5 text-xs font-medium text-blue-600 hover:underline disabled:opacity-60"
+              requestedClassName="px-0.5 text-xs font-medium text-emerald-600"
+            />
           ) : null}
         </div>
         <div className="group-data-[collapsible=icon]:hidden">

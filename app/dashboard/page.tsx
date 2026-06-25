@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/dal";
 import { countItemsForOwner } from "@/lib/queries";
 import { FREE_ITEM_LIMIT, isPro } from "@/lib/plans";
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
+import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -12,6 +13,7 @@ export default async function DashboardPage() {
   const itemCount = await countItemsForOwner(profile.id);
   const pro = isPro(profile.plan);
   const atLimit = !pro && itemCount >= FREE_ITEM_LIMIT;
+  const upgradeRequested = Boolean(profile.upgrade_requested_at);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
@@ -43,19 +45,16 @@ export default async function DashboardPage() {
             <span>Share link: cataloo.app/{profile.handle}</span>
             <CopyLinkButton value={`https://cataloo.app/${profile.handle}`} />
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            {pro ? (
-              "Catalogs: unlimited"
-            ) : (
-              <>
-                Catalogs: 1 of 1 ·{" "}
-                <Link href="/#pricing" className="font-medium text-blue-600 hover:underline">
-                  Upgrade to Pro
-                </Link>{" "}
-                for unlimited
-              </>
-            )}
-          </p>
+          {!pro ? (
+            <p className="mt-1 inline-flex flex-wrap items-center gap-1 text-sm text-gray-500">
+              <RequestUpgradeButton
+                alreadyRequested={upgradeRequested}
+                className="font-medium text-blue-600 hover:underline disabled:opacity-60"
+                requestedClassName="font-medium text-emerald-600"
+              />{" "}
+              for unlimited items, multiple photos, and analytics.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -74,11 +73,13 @@ export default async function DashboardPage() {
                 : `${itemCount} of ${FREE_ITEM_LIMIT} items used`}
             </p>
             {atLimit ? (
-              <p className="text-sm text-amber-600">
+              <p className="inline-flex flex-wrap items-center gap-1 text-sm text-amber-600">
                 You&apos;ve reached the Free plan limit.{" "}
-                <Link href="/#pricing" className="font-medium underline">
-                  Upgrade to Pro
-                </Link>{" "}
+                <RequestUpgradeButton
+                  alreadyRequested={upgradeRequested}
+                  className="font-medium text-amber-700 underline disabled:opacity-60"
+                  requestedClassName="font-medium text-emerald-600"
+                />{" "}
                 for unlimited items.
               </p>
             ) : null}

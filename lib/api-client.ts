@@ -94,7 +94,54 @@ export type ProfileInput = {
   delivery_payment_cod: boolean;
   delivery_fee: number | null;
   logo_url: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
 };
+
+// Fire-and-forget analytics ping for the public catalog. Uses sendBeacon so it
+// survives navigation; the server only records events for Pro catalogs.
+export function trackEvent(
+  handle: string,
+  type: "view" | "item_open",
+  itemId?: string,
+): void {
+  try {
+    const body = JSON.stringify({ handle, type, itemId });
+    if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+      navigator.sendBeacon(
+        "/api/track",
+        new Blob([body], { type: "application/json" }),
+      );
+    } else {
+      void fetch("/api/track", {
+        method: "POST",
+        headers: json,
+        body,
+        keepalive: true,
+      });
+    }
+  } catch {
+    // Analytics is best-effort; never disrupt the catalog.
+  }
+}
+
+export function requestUpgrade(): Promise<Profile> {
+  return fetch("/api/upgrade-request", { method: "POST" }).then((r) =>
+    parse<Profile>(r),
+  );
+}
+
+export function setUserPlan(
+  profileId: string,
+  plan: "free" | "pro",
+): Promise<{ id: string; handle: string; plan: string }> {
+  return fetch("/api/admin/set-plan", {
+    method: "POST",
+    headers: json,
+    body: JSON.stringify({ profileId, plan }),
+  }).then((r) => parse<{ id: string; handle: string; plan: string }>(r));
+}
 
 export function createProfile(input: ProfileInput): Promise<Profile> {
   return fetch("/api/profile", {

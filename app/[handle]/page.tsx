@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LayoutDashboard, Mail, MapPin, Phone } from "lucide-react";
+import { SocialLinks } from "@/components/catalog/SocialLinks";
 import { getCurrentUser } from "@/lib/dal";
 import { showBadge } from "@/lib/plans";
 import { isReservedHandle, normalizeHandle } from "@/lib/handles";
@@ -111,6 +112,7 @@ export default async function PublicCatalogPage({
               {profile.address}
             </span>
           ) : null}
+          <SocialLinks profile={profile} />
         </div>
       </header>
 

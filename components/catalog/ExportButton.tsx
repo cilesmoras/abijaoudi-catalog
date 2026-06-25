@@ -14,7 +14,20 @@ interface ExportButtonProps {
   currency: string | null;
   plan: Plan;
   logoUrl: string | null;
+  socials?: {
+    facebook: string | null;
+    instagram: string | null;
+    tiktok: string | null;
+  };
   disabled?: boolean;
+}
+
+// Strip protocol/www so a social URL reads as a compact handle in the PDF.
+function socialLabel(url: string): string {
+  return url
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/\/$/, "");
 }
 
 export function ExportButton({
@@ -24,6 +37,7 @@ export function ExportButton({
   currency,
   plan,
   logoUrl,
+  socials,
   disabled = false,
 }: ExportButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -230,6 +244,13 @@ export function ExportButton({
         y += 4;
       }
 
+      // Pro-only: social handles to show in the footer (Free has no socials).
+      const socialParts = isPro(plan)
+        ? [socials?.facebook, socials?.instagram, socials?.tiktok]
+            .filter((url): url is string => Boolean(url))
+            .map(socialLabel)
+        : [];
+
       // Free catalogs are watermarked: a large translucent diagonal stamp on
       // every page, plus a clickable "Made with Cataloo" link in the footer.
       // Pro omits both.
@@ -266,7 +287,10 @@ export function ExportButton({
           });
         } else {
           doc.setTextColor(156, 163, 175);
-          doc.text(`${items.length} products`, pageW / 2, pageH - 6, {
+          const footerLine = [`${items.length} products`, ...socialParts].join(
+            "   •   ",
+          );
+          doc.text(footerLine, pageW / 2, pageH - 6, {
             align: "center",
           });
         }

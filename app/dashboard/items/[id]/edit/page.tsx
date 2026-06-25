@@ -6,11 +6,11 @@ export default async function EditItemPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireProfile();
+  const profile = await requireProfile();
   const { id } = await params;
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
-      <EditItemForm itemId={id} />
+      <EditItemForm itemId={id} plan={profile.plan} />
     </main>
   );
 }

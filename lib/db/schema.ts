@@ -25,8 +25,15 @@ export const profiles = pgTable("profiles", {
   // badge, watermarked PDF); Pro unlocks them. Activated manually for now —
   // see scripts/set-plan.mjs — until a payment provider is wired in.
   plan: text("plan").notNull().default("free"),
+  // Set when a Free user asks to upgrade (in-app "Request upgrade"). Surfaced on
+  // the admin users page so we know who to contact; cleared on Pro activation.
+  upgradeRequestedAt: timestamp("upgrade_requested_at", { withTimezone: true }),
   // Pro-only: logo shown on PDF exports in place of the Cataloo branding.
   logoUrl: text("logo_url"),
+  // Pro-only social links, shown on the public catalog and in PDF exports.
+  facebookUrl: text("facebook_url"),
+  instagramUrl: text("instagram_url"),
+  tiktokUrl: text("tiktok_url"),
   offersDelivery: boolean("offers_delivery").notNull().default(false),
   offersPickup: boolean("offers_pickup").notNull().default(false),
   deliveryPaymentUpfront: boolean("delivery_payment_upfront")
@@ -84,6 +91,42 @@ export const items = pgTable("items", {
     .notNull(),
 });
 
+// Pro-only: additional photos for an item beyond its cover (items.imageUrl).
+// The cover stays on items for the grid + PDF; the gallery reads cover + these.
+export const itemImages = pgTable(
+  "item_images",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerId: uuid("owner_id")
+      .references(() => profiles.id, { onDelete: "cascade" })
+      .notNull(),
+    itemId: uuid("item_id")
+      .references(() => items.id, { onDelete: "cascade" })
+      .notNull(),
+    url: text("url").notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    sortOrder: numeric("sort_order", { mode: "number" }).notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [uniqueIndex("item_images_item_sort_key").on(table.itemId, table.sortOrder)],
+);
+
+// Pro-only analytics events for the public catalog. `view` is a catalog page
+// load; `item_open` is a visitor opening an item's lightbox.
+export const catalogEvents = pgTable("catalog_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ownerId: uuid("owner_id")
+    .references(() => profiles.id, { onDelete: "cascade" })
+    .notNull(),
+  type: text("type").notNull(),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const profilesRelations = relations(profiles, ({ many }) => ({
   categories: many(categories),
   items: many(items),
@@ -97,7 +140,7 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
   items: many(items),
 }));
 
-export const itemsRelations = relations(items, ({ one }) => ({
+export const itemsRelations = relations(items, ({ one, many }) => ({
   owner: one(profiles, {
     fields: [items.ownerId],
     references: [profiles.id],
@@ -105,5 +148,17 @@ export const itemsRelations = relations(items, ({ one }) => ({
   category: one(categories, {
     fields: [items.categoryId],
     references: [categories.id],
+  }),
+  images: many(itemImages),
+}));
+
+export const itemImagesRelations = relations(itemImages, ({ one }) => ({
+  item: one(items, {
+    fields: [itemImages.itemId],
+    references: [items.id],
+  }),
+  owner: one(profiles, {
+    fields: [itemImages.ownerId],
+    references: [profiles.id],
   }),
 }));

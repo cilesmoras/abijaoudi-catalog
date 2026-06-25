@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Minus, Plus, MessageCircle } from "lucide-react";
+import { trackEvent } from "@/lib/api-client";
 import {
   CategorySelect,
   CategorySidebar,
@@ -10,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ItemLightbox } from "@/components/catalog/ItemLightbox";
 import type { Category, Item, Profile } from "@/lib/types";
 import { getDialCode } from "@/lib/countries";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
@@ -24,6 +26,17 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [activeItem, setActiveItem] = useState<Item | null>(null);
+
+  // Record a catalog view once per mount (server ignores it unless Pro).
+  useEffect(() => {
+    trackEvent(profile.handle, "view");
+  }, [profile.handle]);
+
+  function openItem(item: Item) {
+    setActiveItem(item);
+    trackEvent(profile.handle, "item_open", item.id);
+  }
 
   const filteredItems = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -122,7 +135,12 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
                     key={item.id}
                     className="flex h-full flex-col overflow-hidden"
                   >
-                    <div className="relative aspect-square w-full bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => openItem(item)}
+                      className="relative aspect-square w-full cursor-zoom-in bg-gray-50"
+                      aria-label={`View ${item.name}`}
+                    >
                       <Image
                         src={getItemImageSrc(item.image_url)}
                         alt={item.name}
@@ -130,12 +148,20 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
                         className="object-cover"
                         sizes="200px"
                       />
-                    </div>
+                      {item.images && item.images.length > 1 ? (
+                        <span className="absolute right-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          {item.images.length} photos
+                        </span>
+                      ) : null}
+                    </button>
                     <CardContent className="flex flex-1 flex-col gap-1 p-4">
                       <span className="text-xs font-medium uppercase tracking-wide text-blue-600">
                         {item.categories?.name ?? "Uncategorized"}
                       </span>
-                      <h3 className="font-semibold leading-tight text-gray-900">
+                      <h3
+                        className="cursor-pointer font-semibold leading-tight text-gray-900 hover:text-blue-700"
+                        onClick={() => openItem(item)}
+                      >
                         {item.name}
                       </h3>
                       {item.description ? (
@@ -213,6 +239,18 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
           </div>
         </div>
       ) : null}
+
+      <ItemLightbox
+        item={activeItem}
+        open={activeItem !== null}
+        onOpenChange={(next) => {
+          if (!next) setActiveItem(null);
+        }}
+        currency={profile.currency}
+        qty={activeItem ? cart[activeItem.id] ?? 0 : 0}
+        onSetQuantity={setQuantity}
+        canOrder={Boolean(phoneDigits)}
+      />
     </>
   );
 }

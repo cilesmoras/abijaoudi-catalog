@@ -10,7 +10,11 @@ export type Profile = {
   address: string | null;
   currency: string | null;
   plan: Plan;
+  upgrade_requested_at: string | null;
   logo_url: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
   offers_delivery: boolean;
   offers_pickup: boolean;
   delivery_payment_upfront: boolean;
@@ -30,6 +34,13 @@ export type Category = {
 
 export type ItemCategoryPreview = Pick<Category, "id" | "name" | "slug">;
 
+export type ItemImage = {
+  id: string;
+  url: string;
+  thumbnail_url: string | null;
+  sort_order: number;
+};
+
 export type Item = {
   id: string;
   owner_id: string;
@@ -43,4 +54,6 @@ export type Item = {
   hidden: boolean;
   created_at: string;
   categories?: ItemCategoryPreview | null;
+  // Pro-only additional photos beyond the cover (image_url). Empty for Free.
+  images?: ItemImage[];
 };

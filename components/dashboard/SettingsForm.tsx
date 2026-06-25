@@ -44,6 +44,9 @@ export function SettingsForm({ profile }: { profile: Profile }) {
           delivery_fee:
             profile.delivery_fee != null ? String(profile.delivery_fee) : "",
           logo_url: profile.logo_url ?? "",
+          facebook_url: profile.facebook_url ?? "",
+          instagram_url: profile.instagram_url ?? "",
+          tiktok_url: profile.tiktok_url ?? "",
         }}
         submitLabel="Save changes"
         onSubmit={handleSubmit}

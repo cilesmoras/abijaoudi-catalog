@@ -30,6 +30,9 @@ type ProfileBody = {
   delivery_payment_cod?: boolean;
   delivery_fee?: number | string | null;
   logo_url?: string | null;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  tiktok_url?: string | null;
 };
 
 function cleanContact(value: unknown): string | null {
@@ -188,9 +191,16 @@ export async function PUT(request: NextRequest) {
     }
     handle = submitted;
   }
-  const logoUrl = isPro(profile.plan)
-    ? cleanContact(body.logo_url)
-    : profile.logo_url;
+  // Logo and social links are Pro-only. Free submissions keep existing values.
+  const pro = isPro(profile.plan);
+  const logoUrl = pro ? cleanContact(body.logo_url) : profile.logo_url;
+  const facebookUrl = pro
+    ? cleanContact(body.facebook_url)
+    : profile.facebook_url;
+  const instagramUrl = pro
+    ? cleanContact(body.instagram_url)
+    : profile.instagram_url;
+  const tiktokUrl = pro ? cleanContact(body.tiktok_url) : profile.tiktok_url;
 
   const [updated] = await db
     .update(profiles)
@@ -198,6 +208,9 @@ export async function PUT(request: NextRequest) {
       handle,
       catalogName,
       logoUrl,
+      facebookUrl,
+      instagramUrl,
+      tiktokUrl,
       phone: cleanContact(body.phone),
       country: cleanCountry(body.country),
       contactEmail: cleanContact(body.contact_email),
