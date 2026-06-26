@@ -4,8 +4,27 @@ import type { Plan } from "@/lib/types";
 // Free item limit in sync with the pricing copy on the landing page.
 export const FREE_ITEM_LIMIT = 30;
 
+// Length of a manually granted Pro term. Matches the $7/mo price. The admin
+// route writes `now + PRO_TERM_DAYS` on activation; the .mjs script uses the
+// equivalent SQL interval literal.
+export const PRO_TERM_DAYS = 30;
+
 export function isPro(plan: Plan): boolean {
   return plan === "pro";
+}
+
+/**
+ * Whole days until the Pro term lapses. Null when not Pro or no expiry is set
+ * (legacy grants). Goes negative once expired. Indicator-only — feature gates
+ * still read `plan`, so an expired countdown does not revert Pro.
+ */
+export function proDaysRemaining(
+  plan: Plan,
+  proExpiresAt: string | null,
+): number | null {
+  if (plan !== "pro" || !proExpiresAt) return null;
+  const ms = new Date(proExpiresAt).getTime() - Date.now();
+  return Math.ceil(ms / (24 * 60 * 60 * 1000));
 }
 
 /** Max items allowed for a plan (Infinity for Pro). */

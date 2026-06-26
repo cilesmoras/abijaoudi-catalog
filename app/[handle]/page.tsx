@@ -71,6 +71,10 @@ export default async function PublicCatalogPage({
       : profile.phone
     : null;
 
+  const hasSocialLinks = Boolean(
+    profile.facebook_url || profile.instagram_url || profile.tiktok_url,
+  );
+
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8 md:px-10">
       <header className="mb-8">
@@ -112,8 +116,12 @@ export default async function PublicCatalogPage({
               {profile.address}
             </span>
           ) : null}
-          <SocialLinks profile={profile} />
         </div>
+        {hasSocialLinks ? (
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
+            <SocialLinks profile={profile} />
+          </div>
+        ) : null}
       </header>
 
       <FulfillmentBanner profile={profile} />

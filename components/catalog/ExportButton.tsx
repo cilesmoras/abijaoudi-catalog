@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import type { Category, Item, Plan } from "@/lib/types";
 import { isPro } from "@/lib/plans";
+import { getDialCode } from "@/lib/countries";
 import { formatPrice } from "@/lib/utils";
 import { Download } from "lucide-react";
 import { useState } from "react";
@@ -14,12 +15,28 @@ interface ExportButtonProps {
   currency: string | null;
   plan: Plan;
   logoUrl: string | null;
+  phone?: string | null;
+  country?: string | null;
+  contactEmail?: string | null;
+  address?: string | null;
   socials?: {
     facebook: string | null;
     instagram: string | null;
     tiktok: string | null;
   };
   disabled?: boolean;
+}
+
+// Format the owner's phone as it appears on the public catalog: prepend the
+// dial code derived from their country, falling back to the raw number.
+function formatPhone(
+  phone: string | null | undefined,
+  country: string | null | undefined,
+): string | null {
+  if (!phone) return null;
+  const dialCode = getDialCode(country);
+  if (!dialCode) return phone;
+  return `+${dialCode} ${phone}`;
 }
 
 // Strip protocol/www so a social URL reads as a compact handle in the PDF.
@@ -37,6 +54,10 @@ export function ExportButton({
   currency,
   plan,
   logoUrl,
+  phone,
+  country,
+  contactEmail,
+  address,
   socials,
   disabled = false,
 }: ExportButtonProps) {
@@ -96,6 +117,24 @@ export function ExportButton({
       doc.setFont("helvetica", "normal");
       doc.text(date, pageW / 2, 18, { align: "center" });
 
+      // Contact line (all plans) — phone • email • address, centered below the
+      // header. Drawn only when at least one field is set; the items grid starts
+      // lower to make room.
+      const contactParts = [
+        formatPhone(phone, country),
+        contactEmail,
+        address,
+      ].filter((part): part is string => Boolean(part));
+      const hasContact = contactParts.length > 0;
+      if (hasContact) {
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(107, 114, 128); // gray-500
+        doc.text(contactParts.join("   •   "), pageW / 2, 26, {
+          align: "center",
+        });
+      }
+
       // Group items by category
       const categoryHeaderH = 10;
       const grouped = new Map<string, Item[]>();
@@ -114,7 +153,7 @@ export function ExportButton({
         return a.localeCompare(b);
       });
 
-      let y = 28;
+      let y = hasContact ? 33 : 28;
       let col = 0;
 
       for (const [categoryName, groupItems] of sortedGroups) {

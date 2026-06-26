@@ -10,6 +10,7 @@ export type Profile = {
   address: string | null;
   currency: string | null;
   plan: Plan;
+  pro_expires_at: string | null;
   upgrade_requested_at: string | null;
   upgrade_request_message: string | null;
   logo_url: string | null;

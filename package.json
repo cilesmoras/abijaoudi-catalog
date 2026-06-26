@@ -17,6 +17,7 @@
     "db:migrate:plan": "node scripts/add-profile-plan.mjs",
     "db:migrate:pro": "node scripts/add-pro-features.mjs",
     "db:migrate:upgrade-message": "node scripts/add-upgrade-message.mjs",
+    "db:migrate:pro-expiry": "node scripts/add-pro-expiry.mjs",
     "set-plan": "node scripts/set-plan.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"

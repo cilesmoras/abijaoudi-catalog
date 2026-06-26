@@ -38,14 +38,22 @@ const sql = postgres(connectionString, { prepare: false, ssl: "require" });
 async function main() {
   // Match by handle directly, or by email via the auth.users table that
   // profiles.id references.
+  // Start a fresh 30-day Pro term on activation; clear it on downgrade. Keep in
+  // sync with PRO_TERM_DAYS in lib/plans.ts.
   const rows = handle
     ? await sql`
-        UPDATE profiles SET plan = ${plan}, updated_at = now()
+        UPDATE profiles
+        SET plan = ${plan},
+            pro_expires_at = CASE WHEN ${plan} = 'pro' THEN now() + interval '30 days' ELSE NULL END,
+            updated_at = now()
         WHERE handle = ${handle}
         RETURNING handle, plan
       `
     : await sql`
-        UPDATE profiles SET plan = ${plan}, updated_at = now()
+        UPDATE profiles
+        SET plan = ${plan},
+            pro_expires_at = CASE WHEN ${plan} = 'pro' THEN now() + interval '30 days' ELSE NULL END,
+            updated_at = now()
         WHERE id = (SELECT id FROM auth.users WHERE email = ${email})
         RETURNING handle, plan
       `;

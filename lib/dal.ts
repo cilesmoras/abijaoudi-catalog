@@ -33,6 +33,7 @@ function mapProfile(row: typeof profiles.$inferSelect): Profile {
     address: row.address,
     currency: row.currency,
     plan: row.plan === "pro" ? "pro" : "free",
+    pro_expires_at: row.proExpiresAt ? row.proExpiresAt.toISOString() : null,
     upgrade_requested_at: row.upgradeRequestedAt
       ? row.upgradeRequestedAt.toISOString()
       : null,

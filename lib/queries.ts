@@ -100,6 +100,7 @@ export function mapProfileRow(row: typeof profiles.$inferSelect): Profile {
     address: row.address,
     currency: row.currency,
     plan: row.plan === "pro" ? "pro" : "free",
+    pro_expires_at: row.proExpiresAt ? toIsoString(row.proExpiresAt) : null,
     upgrade_requested_at: row.upgradeRequestedAt
       ? toIsoString(row.upgradeRequestedAt)
       : null,
@@ -223,6 +224,7 @@ export type AdminUserRow = {
   catalog_name: string;
   email: string | null;
   plan: Plan;
+  pro_expires_at: string | null;
   upgrade_requested_at: string | null;
   upgrade_request_message: string | null;
   created_at: string;
@@ -240,11 +242,12 @@ export async function listAllProfilesForAdmin(): Promise<AdminUserRow[]> {
     catalog_name: string;
     email: string | null;
     plan: string;
+    pro_expires_at: Date | string | null;
     upgrade_requested_at: Date | string | null;
     upgrade_request_message: string | null;
     created_at: Date | string;
   }>(sql`
-    SELECT p.id, p.handle, p.catalog_name, u.email, p.plan,
+    SELECT p.id, p.handle, p.catalog_name, u.email, p.plan, p.pro_expires_at,
            p.upgrade_requested_at, p.upgrade_request_message, p.created_at
     FROM profiles p
     LEFT JOIN auth.users u ON u.id = p.id
@@ -259,6 +262,9 @@ export async function listAllProfilesForAdmin(): Promise<AdminUserRow[]> {
     catalog_name: row.catalog_name,
     email: row.email,
     plan: row.plan === "pro" ? "pro" : "free",
+    pro_expires_at: row.pro_expires_at
+      ? toIsoString(row.pro_expires_at)
+      : null,
     upgrade_requested_at: row.upgrade_requested_at
       ? toIsoString(row.upgrade_requested_at)
       : null,

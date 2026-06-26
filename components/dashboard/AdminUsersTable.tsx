@@ -47,6 +47,7 @@ export function AdminUsersTable({ users }: { users: AdminUserRow[] }) {
             <th className="p-3 font-medium">Catalog</th>
             <th className="p-3 font-medium">Email</th>
             <th className="p-3 font-medium">Plan</th>
+            <th className="p-3 font-medium">Pro expires</th>
             <th className="p-3 font-medium">Upgrade requested</th>
             <th className="p-3 font-medium text-right">Action</th>
           </tr>
@@ -86,6 +87,9 @@ export function AdminUsersTable({ users }: { users: AdminUserRow[] }) {
                   >
                     {pro ? "Pro" : "Free"}
                   </span>
+                </td>
+                <td className="p-3 text-gray-600">
+                  {pro ? formatDate(user.pro_expires_at) : "—"}
                 </td>
                 <td className="max-w-xs p-3 text-gray-600">
                   {user.upgrade_requested_at && !pro ? (

@@ -34,6 +34,10 @@ export function ItemsManager({
   currency,
   plan,
   logoUrl,
+  phone,
+  country,
+  contactEmail,
+  address,
   socials,
   upgradeRequested = false,
 }: {
@@ -41,6 +45,10 @@ export function ItemsManager({
   currency: string | null;
   plan: Plan;
   logoUrl: string | null;
+  phone?: string | null;
+  country?: string | null;
+  contactEmail?: string | null;
+  address?: string | null;
   socials?: {
     facebook: string | null;
     instagram: string | null;
@@ -196,6 +204,10 @@ export function ItemsManager({
             currency={currency}
             plan={plan}
             logoUrl={logoUrl}
+            phone={phone}
+            country={country}
+            contactEmail={contactEmail}
+            address={address}
             socials={socials}
             disabled={selectedItems.length === 0}
           />

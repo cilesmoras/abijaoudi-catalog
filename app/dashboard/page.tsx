@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { requireProfile } from "@/lib/dal";
 import { countItemsForOwner } from "@/lib/queries";
-import { FREE_ITEM_LIMIT, isPro } from "@/lib/plans";
+import { FREE_ITEM_LIMIT, isPro, proDaysRemaining } from "@/lib/plans";
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
 import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ export default async function DashboardPage() {
   const pro = isPro(profile.plan);
   const atLimit = !pro && itemCount >= FREE_ITEM_LIMIT;
   const upgradeRequested = Boolean(profile.upgrade_requested_at);
+  const daysLeft = proDaysRemaining(profile.plan, profile.pro_expires_at);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
@@ -33,6 +34,21 @@ export default async function DashboardPage() {
               {pro ? "Pro plan" : "Free plan"}
             </span>
           </div>
+          {daysLeft !== null ? (
+            <p
+              className={`mt-1 text-sm font-medium ${
+                daysLeft <= 0
+                  ? "text-red-600"
+                  : daysLeft <= 7
+                    ? "text-amber-600"
+                    : "text-gray-500"
+              }`}
+            >
+              {daysLeft <= 0
+                ? "Pro expired — contact us to renew"
+                : `Pro expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`}
+            </p>
+          ) : null}
           <Link
             href={`/${profile.handle}`}
             target="_blank"

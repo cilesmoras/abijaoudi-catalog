@@ -25,6 +25,10 @@ export const profiles = pgTable("profiles", {
   // badge, watermarked PDF); Pro unlocks them. Activated manually for now —
   // see scripts/set-plan.mjs — until a payment provider is wired in.
   plan: text("plan").notNull().default("free"),
+  // When the current Pro term lapses. Set 30 days out on each manual activation;
+  // drives an owner-facing countdown. Null for Free and for legacy Pro grants
+  // made before this column existed. Indicator-only — not a feature gate.
+  proExpiresAt: timestamp("pro_expires_at", { withTimezone: true }),
   // Set when a Free user asks to upgrade (in-app "Request upgrade"). Surfaced on
   // the admin users page so we know who to contact; cleared on Pro activation.
   upgradeRequestedAt: timestamp("upgrade_requested_at", { withTimezone: true }),

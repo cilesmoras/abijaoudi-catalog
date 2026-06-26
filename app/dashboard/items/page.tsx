@@ -10,6 +10,10 @@ export default async function DashboardItemsPage() {
         currency={profile.currency}
         plan={profile.plan}
         logoUrl={profile.logo_url}
+        phone={profile.phone}
+        country={profile.country}
+        contactEmail={profile.contact_email}
+        address={profile.address}
         socials={{
           facebook: profile.facebook_url,
           instagram: profile.instagram_url,

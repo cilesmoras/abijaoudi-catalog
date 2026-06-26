@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { isAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
+import { PRO_TERM_DAYS } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
@@ -29,6 +30,11 @@ export async function POST(request: NextRequest) {
     .update(profiles)
     .set({
       plan,
+      // Start a fresh 30-day term on activation; clear it on downgrade.
+      proExpiresAt:
+        plan === "pro"
+          ? new Date(Date.now() + PRO_TERM_DAYS * 24 * 60 * 60 * 1000)
+          : null,
       upgradeRequestedAt: null,
       upgradeRequestMessage: null,
       updatedAt: new Date(),
