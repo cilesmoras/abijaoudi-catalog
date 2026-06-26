@@ -27,7 +27,12 @@ export async function POST(request: NextRequest) {
 
   const [updated] = await db
     .update(profiles)
-    .set({ plan, upgradeRequestedAt: null, updatedAt: new Date() })
+    .set({
+      plan,
+      upgradeRequestedAt: null,
+      upgradeRequestMessage: null,
+      updatedAt: new Date(),
+    })
     .where(eq(profiles.id, profileId))
     .returning({ id: profiles.id, handle: profiles.handle, plan: profiles.plan });
 

@@ -11,6 +11,7 @@ export type Profile = {
   currency: string | null;
   plan: Plan;
   upgrade_requested_at: string | null;
+  upgrade_request_message: string | null;
   logo_url: string | null;
   facebook_url: string | null;
   instagram_url: string | null;

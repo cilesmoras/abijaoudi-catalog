@@ -126,10 +126,12 @@ export function trackEvent(
   }
 }
 
-export function requestUpgrade(): Promise<Profile> {
-  return fetch("/api/upgrade-request", { method: "POST" }).then((r) =>
-    parse<Profile>(r),
-  );
+export function requestUpgrade(message?: string | null): Promise<Profile> {
+  return fetch("/api/upgrade-request", {
+    method: "POST",
+    headers: json,
+    body: JSON.stringify({ message: message ?? null }),
+  }).then((r) => parse<Profile>(r));
 }
 
 export function setUserPlan(

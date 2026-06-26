@@ -87,11 +87,18 @@ export function AdminUsersTable({ users }: { users: AdminUserRow[] }) {
                     {pro ? "Pro" : "Free"}
                   </span>
                 </td>
-                <td className="p-3 text-gray-600">
+                <td className="max-w-xs p-3 text-gray-600">
                   {user.upgrade_requested_at && !pro ? (
-                    <span className="font-medium text-amber-700">
-                      {formatDate(user.upgrade_requested_at)}
-                    </span>
+                    <div className="space-y-1">
+                      <span className="font-medium text-amber-700">
+                        {formatDate(user.upgrade_requested_at)}
+                      </span>
+                      {user.upgrade_request_message ? (
+                        <p className="whitespace-pre-wrap text-xs italic text-gray-500">
+                          “{user.upgrade_request_message}”
+                        </p>
+                      ) : null}
+                    </div>
                   ) : (
                     "—"
                   )}

@@ -36,6 +36,7 @@ function mapProfile(row: typeof profiles.$inferSelect): Profile {
     upgrade_requested_at: row.upgradeRequestedAt
       ? row.upgradeRequestedAt.toISOString()
       : null,
+    upgrade_request_message: row.upgradeRequestMessage,
     logo_url: row.logoUrl,
     facebook_url: row.facebookUrl,
     instagram_url: row.instagramUrl,

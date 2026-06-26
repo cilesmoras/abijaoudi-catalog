@@ -28,6 +28,9 @@ export const profiles = pgTable("profiles", {
   // Set when a Free user asks to upgrade (in-app "Request upgrade"). Surfaced on
   // the admin users page so we know who to contact; cleared on Pro activation.
   upgradeRequestedAt: timestamp("upgrade_requested_at", { withTimezone: true }),
+  // Optional note the user includes with their upgrade request. Cleared with the
+  // request flag on activation.
+  upgradeRequestMessage: text("upgrade_request_message"),
   // Pro-only: logo shown on PDF exports in place of the Cataloo branding.
   logoUrl: text("logo_url"),
   // Pro-only social links, shown on the public catalog and in PDF exports.

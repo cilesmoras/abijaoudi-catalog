@@ -103,6 +103,7 @@ export function mapProfileRow(row: typeof profiles.$inferSelect): Profile {
     upgrade_requested_at: row.upgradeRequestedAt
       ? toIsoString(row.upgradeRequestedAt)
       : null,
+    upgrade_request_message: row.upgradeRequestMessage,
     logo_url: row.logoUrl,
     facebook_url: row.facebookUrl,
     instagram_url: row.instagramUrl,
@@ -223,6 +224,7 @@ export type AdminUserRow = {
   email: string | null;
   plan: Plan;
   upgrade_requested_at: string | null;
+  upgrade_request_message: string | null;
   created_at: string;
 };
 
@@ -239,10 +241,11 @@ export async function listAllProfilesForAdmin(): Promise<AdminUserRow[]> {
     email: string | null;
     plan: string;
     upgrade_requested_at: Date | string | null;
+    upgrade_request_message: string | null;
     created_at: Date | string;
   }>(sql`
     SELECT p.id, p.handle, p.catalog_name, u.email, p.plan,
-           p.upgrade_requested_at, p.created_at
+           p.upgrade_requested_at, p.upgrade_request_message, p.created_at
     FROM profiles p
     LEFT JOIN auth.users u ON u.id = p.id
     ORDER BY (p.upgrade_requested_at IS NOT NULL) DESC,
@@ -259,6 +262,7 @@ export async function listAllProfilesForAdmin(): Promise<AdminUserRow[]> {
     upgrade_requested_at: row.upgrade_requested_at
       ? toIsoString(row.upgrade_requested_at)
       : null,
+    upgrade_request_message: row.upgrade_request_message,
     created_at: toIsoString(row.created_at),
   }));
 }
