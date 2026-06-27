@@ -1,14 +1,7 @@
-import Link from "next/link";
-import Image from "next/image";
-import {
-  ArrowRight,
-  Check,
-  MessageCircle,
-  Share2,
-  Sparkles,
-  Store,
-} from "lucide-react";
-import { getCurrentUser } from "@/lib/dal";
+import { HeroBackground } from "@/components/landing/HeroBackground";
+import { MobileNav } from "@/components/landing/MobileNav";
+import { NAV_LINKS } from "@/components/landing/nav-links";
+import { Reveal } from "@/components/landing/Reveal";
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
@@ -17,10 +10,17 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { MobileNav } from "@/components/landing/MobileNav";
-import { NAV_LINKS } from "@/components/landing/nav-links";
-import { Reveal } from "@/components/landing/Reveal";
-import { HeroBackground } from "@/components/landing/HeroBackground";
+import { getCurrentUser } from "@/lib/dal";
+import {
+  ArrowRight,
+  Check,
+  MessageCircle,
+  Share2,
+  Sparkles,
+  Store,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 const features = [
   {
@@ -33,7 +33,7 @@ const features = [
     icon: Share2,
     title: "One shareable link",
     description:
-      "Send customers a single link to your catalog at cataloo.app/your-handle.",
+      "Send customers a single link to your catalog at cataloo.app/your-catalog.",
   },
   {
     icon: MessageCircle,
@@ -44,14 +44,17 @@ const features = [
 ];
 
 const steps = [
-  { title: "Sign up free", description: "Create an account with Google or email." },
+  {
+    title: "Sign up free",
+    description: "Create an account with Google or email.",
+  },
   {
     title: "Build your catalog",
     description: "Add your items, photos, and contact details.",
   },
   {
     title: "Share your link",
-    description: "Send customers your handle and start taking orders.",
+    description: "Send customers your catalog and start taking orders.",
   },
 ];
 
@@ -65,29 +68,49 @@ const faqs = [
     a: "No. Anyone with your link can browse your catalog and place a WhatsApp order.",
   },
   {
-    q: "Can I change my handle later?",
-    a: "Yes, you can update your handle, catalog name, and contact info anytime in settings.",
+    q: "Can I change my catalog name later?",
+    a: "Yes, you can update your catalog name and contact info anytime in settings.",
   },
 ];
 
 const planComparison = [
   { feature: "Items", free: "30", pro: "Unlimited" },
-  { feature: "Photos per item", free: "1, compressed", pro: "Multiple, full quality" },
+  {
+    feature: "Photos per item",
+    free: "1, compressed",
+    pro: "Multiple, full quality",
+  },
   {
     feature: "Public share link",
     free: 'Yes, "Made with Cataloo" badge',
     pro: "Badge removed",
   },
   { feature: "Custom link", free: "Random ID", pro: "cataloo.app/yourbrand" },
-  { feature: "PDF export", free: "Watermarked", pro: "Watermark-free, your logo" },
+  {
+    feature: "PDF export",
+    free: "Watermarked",
+    pro: "Watermark-free, your logo",
+  },
   { feature: "Analytics", free: "None", pro: "Views, top items" },
   { feature: "Support", free: "Email, best-effort", pro: "Priority" },
 ];
 
 const previewProducts = [
-  { name: "Sourdough loaf", price: "$6.50", tint: "from-amber-200 to-orange-300" },
-  { name: "Almond croissant", price: "$4.00", tint: "from-rose-200 to-pink-300" },
-  { name: "Cinnamon roll", price: "$3.75", tint: "from-yellow-200 to-amber-300" },
+  {
+    name: "Sourdough loaf",
+    price: "$6.50",
+    tint: "from-amber-200 to-orange-300",
+  },
+  {
+    name: "Almond croissant",
+    price: "$4.00",
+    tint: "from-rose-200 to-pink-300",
+  },
+  {
+    name: "Cinnamon roll",
+    price: "$3.75",
+    tint: "from-yellow-200 to-amber-300",
+  },
   { name: "Baguette", price: "$3.20", tint: "from-orange-200 to-amber-300" },
 ];
 
@@ -193,10 +216,7 @@ export default async function LandingPage() {
         </Reveal>
 
         {/* Mock catalog preview */}
-        <Reveal
-          delay={120}
-          className="mx-auto mt-16 w-full max-w-3xl"
-        >
+        <Reveal delay={120} className="mx-auto mt-16 w-full max-w-3xl">
           <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white/80 shadow-2xl shadow-blue-900/10 backdrop-blur">
             {/* Browser chrome */}
             <div className="flex items-center gap-2 border-b border-gray-200/80 bg-gray-50/80 px-4 py-3">
@@ -217,7 +237,9 @@ export default async function LandingPage() {
                   <p className="text-sm font-semibold text-gray-900">
                     Maria&apos;s Bakery
                   </p>
-                  <p className="text-xs text-gray-500">Fresh daily · Order on WhatsApp</p>
+                  <p className="text-xs text-gray-500">
+                    Fresh daily · Order on WhatsApp
+                  </p>
                 </div>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -278,7 +300,10 @@ export default async function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="mx-auto w-full max-w-6xl scroll-mt-20 px-6 py-24">
+      <section
+        id="how"
+        className="mx-auto w-full max-w-6xl scroll-mt-20 px-6 py-24"
+      >
         <Reveal className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             How it works
@@ -289,7 +314,11 @@ export default async function LandingPage() {
           {/* Connecting line */}
           <div className="absolute left-0 right-0 top-5 hidden h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent md:block" />
           {steps.map((step, index) => (
-            <Reveal key={step.title} delay={index * 120} className="relative text-center">
+            <Reveal
+              key={step.title}
+              delay={index * 120}
+              className="relative text-center"
+            >
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25 ring-8 ring-white">
                 {index + 1}
               </div>
@@ -404,9 +433,13 @@ export default async function LandingPage() {
               </div>
               <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
                 $7
-                <span className="ml-1 text-sm font-medium text-gray-500">/mo</span>
+                <span className="ml-1 text-sm font-medium text-gray-500">
+                  /mo
+                </span>
               </p>
-              <p className="text-xs text-gray-500">or $70/yr · ~2 months free</p>
+              <p className="text-xs text-gray-500">
+                or $70/yr · ~2 months free
+              </p>
               <Button
                 asChild
                 className="mt-5 w-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
@@ -449,10 +482,14 @@ export default async function LandingPage() {
                     <Sparkles className="h-3 w-3" />
                     Available now
                   </span>
-                  <p className="mt-2 text-sm font-semibold text-gray-900">Pro</p>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">
+                    Pro
+                  </p>
                   <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
                     $7
-                    <span className="text-sm font-medium text-gray-500">/mo</span>
+                    <span className="text-sm font-medium text-gray-500">
+                      /mo
+                    </span>
                   </p>
                   <p className="text-xs text-gray-500">
                     or $70/yr · ~2 months free
@@ -508,7 +545,10 @@ export default async function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="mx-auto w-full max-w-3xl scroll-mt-20 px-6 py-24">
+      <section
+        id="faq"
+        className="mx-auto w-full max-w-3xl scroll-mt-20 px-6 py-24"
+      >
         <Reveal className="text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Frequently asked questions
