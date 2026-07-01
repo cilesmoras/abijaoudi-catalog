@@ -164,6 +164,18 @@ export function ItemForm({
     setPhotos((current) => current.filter((_, i) => i !== index));
   }
 
+  // Free cover: clear the pending upload and the saved image so submit sends a
+  // null cover (the server then deletes the old storage objects).
+  function clearImage() {
+    setSelectedFile(null);
+    setImageUrl("");
+    setThumbnailUrl("");
+    setPreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }
+
   // useEffect(() => {
   //   setName(initialValues?.name ?? "");
   //   setDescription(initialValues?.description ?? "");
@@ -544,6 +556,18 @@ export function ItemForm({
             alt="Uploaded preview"
             className="h-28 w-28 rounded-md border object-cover"
           />
+          {previewUrl || imageUrl ? (
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={clearImage}
+              >
+                Remove image
+              </Button>
+            </div>
+          ) : null}
           {uploadingImage ? (
             <p className="text-sm text-gray-500">Uploading image…</p>
           ) : null}

@@ -50,7 +50,23 @@ export async function PUT(
     return Response.json({ error: "Invalid category" }, { status: 400 });
   }
 
-  const [updated] = await db
+  // Capture the item's current image files before mutating so we can delete any
+  // that are no longer referenced after the save (cleared cover, removed gallery
+  // photos, or replaced images).
+  const [oldItem] = await db
+    .select({ imageUrl: items.imageUrl, thumbnailUrl: items.thumbnailUrl })
+    .from(items)
+    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+
+  if (!oldItem)
+    return Response.json({ error: "Item not found" }, { status: 404 });
+
+  const oldGallery = await db
+    .select({ url: itemImages.url, thumbnailUrl: itemImages.thumbnailUrl })
+    .from(itemImages)
+    .where(eq(itemImages.itemId, id));
+
+  await db
     .update(items)
     .set({
       name,
@@ -61,13 +77,32 @@ export async function PUT(
       imageUrl: image_url || null,
       thumbnailUrl: thumbnail_url || null,
     })
-    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)))
-    .returning({ id: items.id });
-
-  if (!updated)
-    return Response.json({ error: "Item not found" }, { status: 404 });
+    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
 
   await syncItemImages(profile.id, id, profile.plan, images);
+
+  // Delete storage objects that are no longer referenced by this item. Diffing
+  // the old URLs against the new payload cleans up cleared/removed/replaced
+  // images while leaving reordered or unchanged photos untouched.
+  const oldUrls = [
+    oldItem.imageUrl,
+    oldItem.thumbnailUrl,
+    ...oldGallery.flatMap((row) => [row.url, row.thumbnailUrl]),
+  ];
+  const newUrls = new Set(
+    [
+      image_url,
+      thumbnail_url,
+      ...(Array.isArray(images)
+        ? images.flatMap((image) => [image?.url, image?.thumbnail_url])
+        : []),
+    ].filter((url): url is string => typeof url === "string" && url.trim() !== ""),
+  );
+  const removed = oldUrls.filter(
+    (url): url is string =>
+      typeof url === "string" && url.trim() !== "" && !newUrls.has(url),
+  );
+  await deleteItemImages(...removed);
 
   const item = await getItemForOwner(profile.id, id);
   return Response.json(item);

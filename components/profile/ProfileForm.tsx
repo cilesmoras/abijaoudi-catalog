@@ -213,6 +213,19 @@ export function ProfileForm({
             onChange={handleLogoChange}
             disabled={uploadingLogo}
           />
+          {logoUrl ? (
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLogoUrl("")}
+                disabled={uploadingLogo}
+              >
+                Remove logo
+              </Button>
+            </div>
+          ) : null}
           <p className="text-xs text-gray-500">
             {uploadingLogo
               ? "Uploading…"

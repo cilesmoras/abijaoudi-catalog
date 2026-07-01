@@ -13,6 +13,7 @@ import { isValidCountryCode } from "@/lib/countries";
 import { isValidCurrencyCode } from "@/lib/currencies";
 import { mapProfileRow } from "@/lib/queries";
 import { canUseCustomHandle, isPro } from "@/lib/plans";
+import { deleteItemImages } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -221,6 +222,12 @@ export async function PUT(request: NextRequest) {
     })
     .where(eq(profiles.id, profile.id))
     .returning();
+
+  // Clean up the old logo file once it's no longer referenced (removed or
+  // replaced). Best-effort — never fails the save.
+  if (pro && profile.logo_url && profile.logo_url !== logoUrl) {
+    await deleteItemImages(profile.logo_url);
+  }
 
   return Response.json(mapProfileRow(updated));
 }
