@@ -1,5 +1,7 @@
-import { requireProfile } from "@/lib/dal";
 import { ItemsManager } from "@/components/dashboard/ItemsManager";
+import { requireProfile } from "@/lib/dal";
+
+export const metadata = { title: "Items | Cataloo" };
 
 export default async function DashboardItemsPage() {
   const profile = await requireProfile();

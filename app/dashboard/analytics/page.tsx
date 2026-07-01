@@ -1,10 +1,10 @@
-import { requireProfile } from "@/lib/dal";
-import { getCatalogAnalytics } from "@/lib/queries";
-import { isPro } from "@/lib/plans";
 import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireProfile } from "@/lib/dal";
+import { isPro } from "@/lib/plans";
+import { getCatalogAnalytics } from "@/lib/queries";
 
-export const metadata = { title: "Analytics" };
+export const metadata = { title: "Analytics | Cataloo" };
 
 export default async function AnalyticsPage() {
   const profile = await requireProfile();

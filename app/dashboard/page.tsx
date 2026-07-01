@@ -1,12 +1,14 @@
-import Link from "next/link";
-import { ExternalLink } from "lucide-react";
-import { requireProfile } from "@/lib/dal";
-import { countItemsForOwner } from "@/lib/queries";
-import { FREE_ITEM_LIMIT, isPro, proDaysRemaining } from "@/lib/plans";
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
 import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { requireProfile } from "@/lib/dal";
+import { FREE_ITEM_LIMIT, isPro, proDaysRemaining } from "@/lib/plans";
+import { countItemsForOwner } from "@/lib/queries";
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
+
+export const metadata = { title: "Dashboard | Cataloo" };
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
@@ -26,9 +28,7 @@ export default async function DashboardPage() {
             </h1>
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                pro
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-600"
+                pro ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
               }`}
             >
               {pro ? "Pro plan" : "Free plan"}

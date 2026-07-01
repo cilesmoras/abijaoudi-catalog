@@ -1,6 +1,5 @@
-const CACHE_NAME = "catalog-v1";
+const CACHE_NAME = "catalog-v2";
 const STATIC_ASSETS = [
-  "/",
   "/favicon.ico",
   "/icon-192x192.png",
   "/icon-512x512.png",
@@ -33,16 +32,7 @@ self.addEventListener("fetch", (event) => {
   // Bypass non-GET and cross-origin requests
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
 
-  // Network-first for API/Next.js data routes
-  if (
-    url.pathname.startsWith("/api/") ||
-    url.pathname.startsWith("/_next/data/")
-  ) {
-    event.respondWith(fetch(request).catch(() => caches.match(request)));
-    return;
-  }
-
-  // Cache-first for static assets
+  // Cache-first for immutable, content-hashed build assets only
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
       caches.match(request).then((cached) => {
@@ -57,17 +47,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Stale-while-revalidate for pages
+  // Network-first for everything else (page navigations, API, data, images).
+  // Online users always get fresh content; the cache is only a fallback when
+  // the network fails (offline). Navigation responses are cached so an offline
+  // revisit still has something to show.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkFetch = fetch(request).then((response) => {
-        if (response.ok) {
+    fetch(request)
+      .then((response) => {
+        if (response.ok && request.mode === "navigate") {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
-      });
-      return cached || networkFetch;
-    }),
+      })
+      .catch(() => caches.match(request)),
   );
 });

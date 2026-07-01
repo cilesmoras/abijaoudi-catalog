@@ -1,5 +1,7 @@
-import { requireProfile } from "@/lib/dal";
 import { CategoriesManager } from "@/components/dashboard/CategoriesManager";
+import { requireProfile } from "@/lib/dal";
+
+export const metadata = { title: "Categories | Cataloo" };
 
 export default async function DashboardCategoriesPage() {
   await requireProfile();

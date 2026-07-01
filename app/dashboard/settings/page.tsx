@@ -1,5 +1,7 @@
-import { requireProfile } from "@/lib/dal";
 import { SettingsForm } from "@/components/dashboard/SettingsForm";
+import { requireProfile } from "@/lib/dal";
+
+export const metadata = { title: "Settings | Cataloo" };
 
 export default async function DashboardSettingsPage() {
   const profile = await requireProfile();
