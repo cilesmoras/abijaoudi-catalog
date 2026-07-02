@@ -11,15 +11,7 @@ function toIsoString(value: string | Date) {
     : new Date(value).toISOString();
 }
 
-export function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+export { slugify } from "@/lib/slug";
 
 // Column shape for an item joined to its category preview.
 const itemSelection = {
