@@ -11,29 +11,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createCategory } from "@/lib/api-client";
-import type { Category, ItemImage, Plan } from "@/lib/types";
+import { createCategoryAction } from "@/app/dashboard/categories/actions";
+import type {
+  Category,
+  ItemFormValues,
+  ItemImage,
+  ItemImageValue,
+  Plan,
+} from "@/lib/types";
 import { isPro } from "@/lib/plans";
 import { getItemImageSrc } from "@/lib/utils";
 import { ArrowDown, ArrowUp, Star, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
-export type ItemImageValue = {
-  url: string;
-  thumbnail_url: string | null;
-  sort_order: number;
-};
-
-export type ItemFormValues = {
-  name: string;
-  description: string | null;
-  price: number;
-  unit: string | null;
-  category_id: string | null;
-  image_url: string | null;
-  thumbnail_url: string | null;
-  images?: ItemImageValue[] | null;
-};
+// Re-exported so existing importers (api-client, form wrappers) keep working;
+// the canonical definitions now live in lib/types.ts.
+export type { ItemFormValues, ItemImageValue };
 
 interface ItemFormProps {
   categories: Category[];
@@ -215,7 +208,12 @@ export function ItemForm({
     setCreatingCategory(true);
     setError(null);
     try {
-      const created = await createCategory(trimmed);
+      const result = await createCategoryAction(trimmed);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      const created = result.data;
       setCreatedCategories((current) =>
         current.some((category) => category.id === created.id)
           ? current

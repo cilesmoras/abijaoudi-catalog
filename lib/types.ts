@@ -59,3 +59,23 @@ export type Item = {
   // Pro-only additional photos beyond the cover (image_url). Empty for Free.
   images?: ItemImage[];
 };
+
+// A single gallery photo in an item create/update payload.
+export type ItemImageValue = {
+  url: string;
+  thumbnail_url: string | null;
+  sort_order: number;
+};
+
+// The payload shape produced by the item form and consumed by the create/update
+// mutations (Server Actions + the legacy /api/items route handlers).
+export type ItemFormValues = {
+  name: string;
+  description: string | null;
+  price: number;
+  unit: string | null;
+  category_id: string | null;
+  image_url: string | null;
+  thumbnail_url: string | null;
+  images?: ItemImageValue[] | null;
+};

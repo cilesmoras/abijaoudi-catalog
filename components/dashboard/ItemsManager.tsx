@@ -1,9 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import {
+  deleteItemAction,
+  setItemHiddenAction,
+} from "@/app/dashboard/items/actions";
 import { ExportButton } from "@/components/catalog/ExportButton";
 import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import { Button } from "@/components/ui/button";
@@ -15,12 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  fetchCategories,
-  fetchItems,
-  deleteItem,
-  setItemHidden,
-} from "@/lib/api-client";
 import type { Category, Item, Plan } from "@/lib/types";
 import { FREE_ITEM_LIMIT, isPro } from "@/lib/plans";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
@@ -29,7 +34,24 @@ const PAGE_SIZE = 10;
 const ALL_CATEGORIES = "all";
 const UNCATEGORIZED = "uncategorized";
 
+type OptimisticAction =
+  | { type: "remove"; id: string }
+  | { type: "toggleHidden"; id: string };
+
+function itemsReducer(state: Item[], action: OptimisticAction): Item[] {
+  switch (action.type) {
+    case "remove":
+      return state.filter((item) => item.id !== action.id);
+    case "toggleHidden":
+      return state.map((item) =>
+        item.id === action.id ? { ...item, hidden: !item.hidden } : item,
+      );
+  }
+}
+
 export function ItemsManager({
+  initialItems,
+  initialCategories,
   catalogName,
   currency,
   plan,
@@ -41,6 +63,8 @@ export function ItemsManager({
   socials,
   upgradeRequested = false,
 }: {
+  initialItems: Item[];
+  initialCategories: Category[];
   catalogName: string;
   currency: string | null;
   plan: Plan;
@@ -56,35 +80,17 @@ export function ItemsManager({
   };
   upgradeRequested?: boolean;
 }) {
-  const [items, setItems] = useState<Item[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const categories = initialCategories;
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const selectAllRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [itemsPayload, categoriesPayload] = await Promise.all([
-          fetchItems(),
-          fetchCategories(),
-        ]);
-        setItems(itemsPayload);
-        setCategories(categoriesPayload);
-      } catch {
-        setError("Failed to load items");
-      } finally {
-        setLoading(false);
-      }
-    }
-    void load();
-  }, []);
+  // Seeded from server-fetched data; optimistic edits reconcile to the
+  // revalidated server state once each action resolves (or revert on error).
+  const [items, applyOptimistic] = useOptimistic(initialItems, itemsReducer);
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -146,33 +152,30 @@ export function ItemsManager({
     setSelectedItemIds(checked ? filteredItems.map((item) => item.id) : []);
   }
 
-  async function handleDelete(itemId: string) {
+  function handleDelete(itemId: string) {
     if (!window.confirm("Delete this item?")) return;
-    try {
-      await deleteItem(itemId);
-    } catch {
-      toast.error("Failed to delete item");
-      return;
-    }
-    setItems((current) => current.filter((item) => item.id !== itemId));
-    setSelectedItemIds((current) => current.filter((id) => id !== itemId));
-    toast.success("Item deleted.");
+    startTransition(async () => {
+      applyOptimistic({ type: "remove", id: itemId });
+      setSelectedItemIds((current) => current.filter((id) => id !== itemId));
+      const result = await deleteItemAction(itemId);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success("Item deleted.");
+      }
+    });
   }
 
-  async function handleToggleHidden(item: Item) {
-    try {
-      const updated = await setItemHidden(item.id, !item.hidden);
-      setItems((current) =>
-        current.map((existing) =>
-          existing.id === item.id
-            ? { ...existing, hidden: updated.hidden }
-            : existing,
-        ),
-      );
-      toast.success(updated.hidden ? "Item hidden." : "Item visible.");
-    } catch {
-      toast.error("Failed to update item visibility");
-    }
+  function handleToggleHidden(item: Item) {
+    startTransition(async () => {
+      applyOptimistic({ type: "toggleHidden", id: item.id });
+      const result = await setItemHiddenAction(item.id, !item.hidden);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(result.data.hidden ? "Item hidden." : "Item visible.");
+      }
+    });
   }
 
   const atLimit = !isPro(plan) && items.length >= FREE_ITEM_LIMIT;
@@ -267,160 +270,157 @@ export function ItemsManager({
         </Select>
       </div>
 
-      {loading ? <p className="text-gray-600">Loading items…</p> : null}
-      {error ? <p className="mb-4 text-red-600">{error}</p> : null}
-
-      {!loading ? (
-        filteredItems.length > 0 ? (
-          <>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="min-w-full divide-y">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
+      {filteredItems.length > 0 ? (
+        <>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-full divide-y">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left">
+                    <input
+                      ref={selectAllRef}
+                      data-testid="select-all"
+                      type="checkbox"
+                      checked={selectionState.allSelected}
+                      onChange={(event) =>
+                        toggleSelectAll(event.target.checked)
+                      }
+                      disabled={filteredItems.length === 0}
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                    Photo
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                    Price
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                    Unit
+                  </th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y bg-white">
+                {pagedItems.map((item) => (
+                  <tr key={item.id} className={item.hidden ? "opacity-60" : ""}>
+                    <td className="px-4 py-2">
                       <input
-                        ref={selectAllRef}
-                        data-testid="select-all"
                         type="checkbox"
-                        checked={selectionState.allSelected}
-                        onChange={(event) =>
-                          toggleSelectAll(event.target.checked)
-                        }
-                        disabled={filteredItems.length === 0}
+                        checked={selectedItemIds.includes(item.id)}
+                        onChange={() => toggleSelected(item.id)}
                       />
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                      Photo
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                      Category
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                      Price
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                      Unit
-                    </th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y bg-white">
-                  {pagedItems.map((item) => (
-                    <tr key={item.id} className={item.hidden ? "opacity-60" : ""}>
-                      <td className="px-4 py-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedItemIds.includes(item.id)}
-                          onChange={() => toggleSelected(item.id)}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="relative h-10 w-10 overflow-hidden rounded-md bg-gray-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={getItemImageSrc(
+                            item.thumbnail_url ?? item.image_url,
+                          )}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
                         />
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="relative h-10 w-10 overflow-hidden rounded-md bg-gray-100">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={getItemImageSrc(
-                              item.thumbnail_url ?? item.image_url,
-                            )}
-                            alt={item.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-800">
-                        <span className="inline-flex items-center gap-2">
-                          {item.name}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-800">
+                      <span className="inline-flex items-center gap-2">
+                        {item.name}
+                        {item.hidden ? (
+                          <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600">
+                            Hidden
+                          </span>
+                        ) : null}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {item.categories?.name ?? "Uncategorized"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {formatPrice(item.price, currency)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {item.unit ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleHidden(item)}
+                          disabled={isPending}
+                          title={item.hidden ? "Show item" : "Hide item"}
+                        >
                           {item.hidden ? (
-                            <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600">
-                              Hidden
-                            </span>
-                          ) : null}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {item.categories?.name ?? "Uncategorized"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {formatPrice(item.price, currency)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {item.unit ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void handleToggleHidden(item)}
-                            title={item.hidden ? "Show item" : "Hide item"}
-                          >
-                            {item.hidden ? (
-                              <Eye className="h-4 w-4" />
-                            ) : (
-                              <EyeOff className="h-4 w-4" />
-                            )}
-                            {item.hidden ? "Show" : "Hide"}
-                          </Button>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/dashboard/items/${item.id}/edit`}>
-                              Edit
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => void handleDelete(item.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          )}
+                          {item.hidden ? "Show" : "Hide"}
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/dashboard/items/${item.id}/edit`}>
+                            Edit
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(item.id)}
+                          disabled={isPending}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <p className="text-sm text-gray-600">
-                {filteredItems.length} item
-                {filteredItems.length === 1 ? "" : "s"}
-              </p>
-              {totalPages > 1 ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-gray-600">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage >= totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-          </>
-        ) : items.length > 0 ? (
-          <p className="text-gray-600">No items match your filters.</p>
-        ) : (
-          <p className="text-gray-600">No items found. Create your first item.</p>
-        )
-      ) : null}
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-gray-600">
+              {filteredItems.length} item
+              {filteredItems.length === 1 ? "" : "s"}
+            </p>
+            {totalPages > 1 ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </>
+      ) : items.length > 0 ? (
+        <p className="text-gray-600">No items match your filters.</p>
+      ) : (
+        <p className="text-gray-600">No items found. Create your first item.</p>
+      )}
     </>
   );
 }

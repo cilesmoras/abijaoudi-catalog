@@ -1,31 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { ItemForm, type ItemFormValues } from "@/components/admin/ItemForm";
+import { createItemAction } from "@/app/dashboard/items/actions";
+import { ItemForm } from "@/components/admin/ItemForm";
 import { BackLink } from "@/components/dashboard/BackLink";
-import { createItem, fetchCategories } from "@/lib/api-client";
-import type { Category, Plan } from "@/lib/types";
+import type { Category, ItemFormValues, Plan } from "@/lib/types";
 
-export function NewItemForm({ plan }: { plan: Plan }) {
-  const [categories, setCategories] = useState<Category[]>([]);
+export function NewItemForm({
+  plan,
+  categories,
+}: {
+  plan: Plan;
+  categories: Category[];
+}) {
   const [submitting, setSubmitting] = useState(false);
   const [formKey, setFormKey] = useState(0);
-
-  useEffect(() => {
-    fetchCategories()
-      .then(setCategories)
-      .catch(() => toast.error("Failed to load categories"));
-  }, []);
 
   async function handleSubmit(values: ItemFormValues) {
     setSubmitting(true);
     try {
-      await createItem(values);
+      const result = await createItemAction(values);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Item created successfully.");
       setFormKey((k) => k + 1);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create item");
     } finally {
       setSubmitting(false);
     }
