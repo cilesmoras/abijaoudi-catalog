@@ -1,77 +1,93 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
+import {
+  createCategoryAction,
+  deleteCategoryAction,
+} from "@/app/dashboard/categories/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  createCategory,
-  deleteCategory,
-  fetchCategories,
-} from "@/lib/api-client";
+import { slugify } from "@/lib/slug";
 import type { Category } from "@/lib/types";
 
-export function CategoriesManager() {
-  const [categories, setCategories] = useState<Category[]>([]);
+type OptimisticAction =
+  | { type: "add"; category: Category }
+  | { type: "remove"; id: string };
+
+function categoriesReducer(
+  state: Category[],
+  action: OptimisticAction,
+): Category[] {
+  switch (action.type) {
+    case "add":
+      return [...state, action.category].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+    case "remove":
+      return state.filter((category) => category.id !== action.id);
+  }
+}
+
+export function CategoriesManager({
+  initialCategories,
+}: {
+  initialCategories: Category[];
+}) {
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    fetchCategories()
-      .then(setCategories)
-      .catch(() => setError("Failed to load categories"))
-      .finally(() => setLoading(false));
-  }, []);
+  // Seeded from server-fetched data; optimistic entries reconcile to the
+  // revalidated server state once each action resolves (or revert on error).
+  const [categories, applyOptimistic] = useOptimistic(
+    initialCategories,
+    categoriesReducer,
+  );
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
+  function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedName = newCategoryName.trim();
     if (!trimmedName) return;
 
-    setSubmitting(true);
-    try {
-      const created = await createCategory(trimmedName);
-      setCategories((current) =>
-        [...current, created].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setNewCategoryName("");
-      toast.success("Category added.");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to create category",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    setNewCategoryName("");
+    startTransition(async () => {
+      applyOptimistic({
+        type: "add",
+        category: {
+          id: `optimistic-${trimmedName}`,
+          owner_id: "",
+          name: trimmedName,
+          slug: slugify(trimmedName),
+          created_at: new Date().toISOString(),
+        },
+      });
+
+      const result = await createCategoryAction(trimmedName);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success("Category added.");
+      }
+    });
   }
 
-  async function handleDelete(categoryId: string) {
+  function handleDelete(categoryId: string) {
     if (!window.confirm("Delete this category?")) return;
-    try {
-      await deleteCategory(categoryId);
-    } catch {
-      toast.error("Failed to delete category");
-      return;
-    }
-    setCategories((current) =>
-      current.filter((category) => category.id !== categoryId),
-    );
-    toast.success("Category deleted.");
+
+    startTransition(async () => {
+      applyOptimistic({ type: "remove", id: categoryId });
+
+      const result = await deleteCategoryAction(categoryId);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success("Category deleted.");
+      }
+    });
   }
 
   return (
     <>
-      <div className="mb-6 flex items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            Categories
-          </h1>
-          <p className="text-gray-600">Create and remove item categories.</p>
-        </div>
-      </div>
-
       <form
         onSubmit={handleCreate}
         className="mb-6 flex flex-col gap-2 sm:flex-row"
@@ -82,60 +98,55 @@ export function CategoriesManager() {
           placeholder="New category name"
           required
         />
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Adding…" : "Add category"}
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Adding…" : "Add category"}
         </Button>
       </form>
 
-      {loading ? <p className="text-gray-600">Loading categories…</p> : null}
-      {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
-
-      {!loading ? (
-        categories.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-full divide-y">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Slug
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                    Actions
-                  </th>
+      {categories.length > 0 ? (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="min-w-full divide-y">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Slug
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y bg-white">
+              {categories.map((category) => (
+                <tr key={category.id}>
+                  <td className="px-4 py-3 text-sm text-gray-800">
+                    {category.name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {category.slug}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(category.id)}
+                    >
+                      Delete
+                    </Button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y bg-white">
-                {categories.map((category) => (
-                  <tr key={category.id}>
-                    <td className="px-4 py-3 text-sm text-gray-800">
-                      {category.name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {category.slug}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => void handleDelete(category.id)}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-600">
-            No categories found. Add your first category.
-          </p>
-        )
-      ) : null}
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-gray-600">
+          No categories found. Add your first category.
+        </p>
+      )}
     </>
   );
 }
