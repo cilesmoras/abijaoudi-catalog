@@ -1,20 +1,20 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { Minus, Plus, MessageCircle } from "lucide-react";
-import { trackEvent } from "@/lib/api-client";
 import {
   CategorySelect,
   CategorySidebar,
 } from "@/components/catalog/CategoryFilter";
+import { ItemLightbox } from "@/components/catalog/ItemLightbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ItemLightbox } from "@/components/catalog/ItemLightbox";
-import type { Category, Item, Profile } from "@/lib/types";
+import { trackEvent } from "@/lib/api-client";
 import { getDialCode } from "@/lib/countries";
+import type { Category, Item, Profile } from "@/lib/types";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
+import { MessageCircle, Minus, Plus } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 
 interface PublicCatalogProps {
   profile: Profile;
@@ -22,7 +22,11 @@ interface PublicCatalogProps {
   categories: Category[];
 }
 
-export function PublicCatalog({ profile, items, categories }: PublicCatalogProps) {
+export function PublicCatalog({
+  profile,
+  items,
+  categories,
+}: PublicCatalogProps) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -65,7 +69,9 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
           const item = items.find((i) => i.id === id);
           return item ? { item, qty } : null;
         })
-        .filter((entry): entry is { item: Item; qty: number } => entry !== null),
+        .filter(
+          (entry): entry is { item: Item; qty: number } => entry !== null,
+        ),
     [cart, items],
   );
 
@@ -79,8 +85,12 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
   // plus a country, so prepend the country's dial code. Legacy profiles with no
   // country fall back to using the stored digits as-is (assumed international).
   const dialCode = getDialCode(profile.country);
-  const nationalDigits = (profile.phone ?? "").replace(/\D/g, "").replace(/^0+/, "");
-  const phoneDigits = dialCode ? `${dialCode}${nationalDigits}` : nationalDigits;
+  const nationalDigits = (profile.phone ?? "")
+    .replace(/\D/g, "")
+    .replace(/^0+/, "");
+  const phoneDigits = dialCode
+    ? `${dialCode}${nationalDigits}`
+    : nationalDigits;
 
   function orderOnWhatsApp() {
     if (!phoneDigits || cartEntries.length === 0) return;
@@ -127,7 +137,7 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
           </div>
 
           {filteredItems.length > 0 ? (
-            <section className="grid justify-center gap-5 pb-28 [grid-template-columns:repeat(auto-fill,minmax(150px,200px))]">
+            <section className="grid justify-between gap-4 pb-28 grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(150px,200px))]">
               {filteredItems.map((item) => {
                 const qty = cart[item.id] ?? 0;
                 return (
@@ -247,7 +257,7 @@ export function PublicCatalog({ profile, items, categories }: PublicCatalogProps
           if (!next) setActiveItem(null);
         }}
         currency={profile.currency}
-        qty={activeItem ? cart[activeItem.id] ?? 0 : 0}
+        qty={activeItem ? (cart[activeItem.id] ?? 0) : 0}
         onSetQuantity={setQuantity}
         canOrder={Boolean(phoneDigits)}
       />
