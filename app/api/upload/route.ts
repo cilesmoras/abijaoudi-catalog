@@ -6,8 +6,8 @@ import { canUploadFullQuality } from "@/lib/plans";
 
 export const runtime = "nodejs";
 
-// Longest-edge sizes (px). Catalog image is kept small to keep PDF exports light.
-const CATALOG_MAX = 200; // catalog page + embedded in the exported PDF
+// Longest-edge sizes (px). `withoutEnlargement` keeps small originals as-is.
+const CATALOG_MAX = 400; // sized for crisp catalog thumbnails + PDF export
 const THUMB_MAX = 80; // displayed ~40px in the admin items table
 const FULL_MAX = 1600; // Pro: full-quality variant shown in the public lightbox
 

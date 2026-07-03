@@ -156,7 +156,8 @@ export function PublicCatalog({
                         alt={item.name}
                         fill
                         className="object-cover"
-                        sizes="200px"
+                        quality={85}
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 200px"
                       />
                       {item.images && item.images.length > 1 ? (
                         <span className="absolute right-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">

@@ -52,16 +52,16 @@ export function ItemLightbox({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogTitle className="pr-8">{item.name}</DialogTitle>
 
-        <div className="relative h-[45vh] max-h-[480px] min-h-[220px] w-full overflow-hidden rounded-lg bg-gray-50">
+        <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-50">
           <Image
             src={photos[safeIndex]}
             alt={item.name}
             fill
             className="object-contain"
-            sizes="(max-width: 768px) 100vw, 640px"
+            sizes="(max-width: 768px) 100vw, 448px"
           />
           {photos.length > 1 ? (
             <>
