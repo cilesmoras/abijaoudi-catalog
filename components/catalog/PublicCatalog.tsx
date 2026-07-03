@@ -7,12 +7,18 @@ import {
 import { ItemLightbox } from "@/components/catalog/ItemLightbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/api-client";
 import { getDialCode } from "@/lib/countries";
 import type { Category, Item, Profile } from "@/lib/types";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
-import { MessageCircle, Minus, Plus } from "lucide-react";
+import { MessageCircle, Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
@@ -30,6 +36,7 @@ export function PublicCatalog({
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [cartOpen, setCartOpen] = useState(false);
   const [activeItem, setActiveItem] = useState<Item | null>(null);
 
   // Record a catalog view once per mount (server ignores it unless Pro).
@@ -60,6 +67,10 @@ export function PublicCatalog({
       else next[itemId] = quantity;
       return next;
     });
+  }
+
+  function clearCart() {
+    setCart({});
   }
 
   const cartEntries = useMemo(
@@ -107,6 +118,8 @@ export function PublicCatalog({
     ].join("\n");
     const url = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
+    clearCart();
+    setCartOpen(false);
   }
 
   return (
@@ -243,13 +256,88 @@ export function PublicCatalog({
                 {formatPrice(totalPrice, profile.currency)}
               </span>
             </div>
-            <Button onClick={orderOnWhatsApp} className="gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Order on WhatsApp
-            </Button>
+            <Button onClick={() => setCartOpen(true)}>View cart</Button>
           </div>
         </div>
       ) : null}
+
+      <Dialog open={cartOpen} onOpenChange={setCartOpen}>
+        <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Your order</DialogTitle>
+          </DialogHeader>
+
+          {cartEntries.length > 0 ? (
+            <>
+              <ul className="divide-y">
+                {cartEntries.map(({ item, qty }) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-gray-900">
+                        {item.name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {formatPrice(item.price * qty, profile.currency)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="Decrease quantity"
+                        onClick={() => setQuantity(item.id, qty - 1)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="min-w-8 text-center font-medium">
+                        {qty}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="Increase quantity"
+                        onClick={() => setQuantity(item.id, qty + 1)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex items-center justify-between border-t pt-3 text-base font-semibold">
+                <span>Total</span>
+                <span>{formatPrice(totalPrice, profile.currency)}</span>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="outline"
+                  className="gap-2 sm:flex-1"
+                  onClick={clearCart}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Clear cart
+                </Button>
+                <Button
+                  className="gap-2 sm:flex-1"
+                  onClick={orderOnWhatsApp}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Order on WhatsApp
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="py-6 text-center text-sm text-gray-500">
+              Your cart is empty.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ItemLightbox
         item={activeItem}
