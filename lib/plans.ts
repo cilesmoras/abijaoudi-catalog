@@ -4,7 +4,7 @@ import type { Plan } from "@/lib/types";
 // Free item limit in sync with the pricing copy on the landing page.
 export const FREE_ITEM_LIMIT = 30;
 
-// Length of a manually granted Pro term. Matches the $7/mo price. The admin
+// Length of a manually granted Pro term. The admin
 // route writes `now + PRO_TERM_DAYS` on activation; the .mjs script uses the
 // equivalent SQL interval literal.
 export const PRO_TERM_DAYS = 30;

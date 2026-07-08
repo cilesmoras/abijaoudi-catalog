@@ -431,14 +431,8 @@ export default async function LandingPage() {
                   Available now
                 </span>
               </div>
-              <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
-                $7
-                <span className="ml-1 text-sm font-medium text-gray-500">
-                  /mo
-                </span>
-              </p>
-              <p className="text-xs text-gray-500">
-                or $70/yr · ~2 months free
+              <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
+                Contact for pricing
               </p>
               <Button
                 asChild
@@ -485,14 +479,8 @@ export default async function LandingPage() {
                   <p className="mt-2 text-sm font-semibold text-gray-900">
                     Pro
                   </p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-                    $7
-                    <span className="text-sm font-medium text-gray-500">
-                      /mo
-                    </span>
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    or $70/yr · ~2 months free
+                  <p className="mt-1 text-lg font-semibold tracking-tight text-gray-900">
+                    Contact for pricing
                   </p>
                 </div>
               </div>
