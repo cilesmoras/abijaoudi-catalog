@@ -29,6 +29,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const navItems = [
@@ -54,6 +55,8 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const pro = isPro(plan);
+  const { setOpenMobile } = useSidebar();
+  const closeMobileSidebar = () => setOpenMobile(false);
 
   return (
     <Sidebar collapsible="icon">
@@ -62,6 +65,7 @@ export function AppSidebar({
           href="/"
           className="flex items-center gap-2 px-2 py-1.5"
           title="Cataloo home"
+          onClick={closeMobileSidebar}
         >
           <Image
             src="/icon-192x192.png"
@@ -93,7 +97,7 @@ export function AppSidebar({
                     isActive={isActive}
                     tooltip={item.title}
                   >
-                    <Link href={item.href}>
+                    <Link href={item.href} onClick={closeMobileSidebar}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -108,7 +112,7 @@ export function AppSidebar({
                   isActive={pathname.startsWith("/dashboard/admin")}
                   tooltip="Admin"
                 >
-                  <Link href="/dashboard/admin">
+                  <Link href="/dashboard/admin" onClick={closeMobileSidebar}>
                     <Shield />
                     <span>Admin</span>
                   </Link>
@@ -122,7 +126,12 @@ export function AppSidebar({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="View public catalog">
-                <a href={`/${handle}`} target="_blank" rel="noreferrer">
+                <a
+                  href={`/${handle}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={closeMobileSidebar}
+                >
                   <ExternalLink />
                   <span>View public catalog</span>
                 </a>

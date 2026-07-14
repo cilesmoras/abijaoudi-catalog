@@ -5,7 +5,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 
-import { useIsMobile } from "@/hooks/use-mobile";
+import { MOBILE_MEDIA_QUERY, useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,9 +93,19 @@ const SidebarProvider = React.forwardRef<
     );
 
     const toggleSidebar = React.useCallback(() => {
-      return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open);
+      // Decide from the live media query, not React state: on some phones the
+      // isMobile state can lag the viewport, and a touch double-fire would net
+      // a toggle back to closed. An idempotent open is immune to both (the
+      // trigger is unreachable while the sheet overlays the header).
+      const mobile =
+        typeof window !== "undefined"
+          ? window.matchMedia(MOBILE_MEDIA_QUERY).matches
+          : isMobile;
+      if (mobile) {
+        setOpenMobile(true);
+      } else {
+        setOpen((open) => !open);
+      }
     }, [isMobile, setOpen, setOpenMobile]);
 
     React.useEffect(() => {
@@ -263,7 +273,7 @@ Sidebar.displayName = "Sidebar";
 const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
->(({ className, onClick, ...props }, ref) => {
+>(({ className, onClick, children, ...props }, ref) => {
   const { toggleSidebar } = useSidebar();
 
   return (
@@ -279,8 +289,12 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <PanelLeft />
-      <span className="sr-only">Toggle Sidebar</span>
+      {children ?? (
+        <>
+          <PanelLeft />
+          <span className="sr-only">Toggle Sidebar</span>
+        </>
+      )}
     </Button>
   );
 });

@@ -1,10 +1,8 @@
 import { getCurrentUser, requireProfile } from "@/lib/dal";
 import { isAdmin } from "@/lib/admin";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
-import {
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarTriggers } from "@/components/dashboard/SidebarTriggers";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function DashboardLayout({
   children,
@@ -25,7 +23,7 @@ export default async function DashboardLayout({
       />
       <div className="flex min-h-svh flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-gray-200/70 bg-white/70 px-4 backdrop-blur-xl">
-          <SidebarTrigger className="text-gray-700" />
+          <SidebarTriggers />
           <span className="text-sm font-semibold text-gray-900">
             {profile.catalog_name}
           </span>

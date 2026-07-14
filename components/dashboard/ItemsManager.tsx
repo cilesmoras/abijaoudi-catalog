@@ -9,15 +9,21 @@ import {
   useState,
   useTransition,
 } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteItemAction,
   setItemHiddenAction,
 } from "@/app/dashboard/items/actions";
 import { ExportButton } from "@/components/catalog/ExportButton";
+import { ItemActionsMenu } from "@/components/dashboard/ItemActionsMenu";
 import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -28,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import type { Category, Item, Plan } from "@/lib/types";
 import { FREE_ITEM_LIMIT, isPro } from "@/lib/plans";
-import { formatPrice, getItemImageSrc } from "@/lib/utils";
+import { cn, formatPrice, getItemImageSrc } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 const ALL_CATEGORIES = "all";
@@ -85,8 +91,10 @@ export function ItemsManager({
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
   const [page, setPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<Item | null>(null);
   const [isPending, startTransition] = useTransition();
   const selectAllRef = useRef<HTMLInputElement | null>(null);
+  const mobileSelectAllRef = useRef<HTMLInputElement | null>(null);
 
   // Seeded from server-fetched data; optimistic edits reconcile to the
   // revalidated server state once each action resolves (or revert on error).
@@ -135,8 +143,10 @@ export function ItemsManager({
   }, [filteredItems, selectedItemIds]);
 
   useEffect(() => {
-    if (selectAllRef.current) {
-      selectAllRef.current.indeterminate = selectionState.someSelected;
+    for (const ref of [selectAllRef, mobileSelectAllRef]) {
+      if (ref.current) {
+        ref.current.indeterminate = selectionState.someSelected;
+      }
     }
   }, [selectionState.someSelected]);
 
@@ -152,8 +162,14 @@ export function ItemsManager({
     setSelectedItemIds(checked ? filteredItems.map((item) => item.id) : []);
   }
 
-  function handleDelete(itemId: string) {
-    if (!window.confirm("Delete this item?")) return;
+  function requestDelete(item: Item) {
+    setDeleteTarget(item);
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    const itemId = deleteTarget.id;
+    setDeleteTarget(null);
     startTransition(async () => {
       applyOptimistic({ type: "remove", id: itemId });
       setSelectedItemIds((current) => current.filter((id) => id !== itemId));
@@ -272,7 +288,7 @@ export function ItemsManager({
 
       {filteredItems.length > 0 ? (
         <>
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="hidden overflow-x-auto rounded-lg border md:block">
             <table className="min-w-full divide-y">
               <thead className="bg-gray-50">
                 <tr>
@@ -350,40 +366,81 @@ export function ItemsManager({
                       {item.unit ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="inline-flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleHidden(item)}
-                          disabled={isPending}
-                          title={item.hidden ? "Show item" : "Hide item"}
-                        >
-                          {item.hidden ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                          {item.hidden ? "Show" : "Hide"}
-                        </Button>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/dashboard/items/${item.id}/edit`}>
-                            Edit
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(item.id)}
-                          disabled={isPending}
-                        >
-                          Delete
-                        </Button>
-                      </div>
+                      <ItemActionsMenu
+                        item={item}
+                        disabled={isPending}
+                        onToggleHidden={handleToggleHidden}
+                        onRequestDelete={requestDelete}
+                      />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="md:hidden">
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <input
+                ref={mobileSelectAllRef}
+                type="checkbox"
+                className="h-4 w-4"
+                checked={selectionState.allSelected}
+                onChange={(event) => toggleSelectAll(event.target.checked)}
+              />
+              <span className="text-sm text-gray-600">
+                Select all ({filteredItems.length})
+              </span>
+            </div>
+            <ul className="space-y-2">
+              {pagedItems.map((item) => (
+                <li
+                  key={item.id}
+                  className={cn(
+                    "flex items-start gap-3 rounded-lg border bg-white p-3",
+                    item.hidden && "opacity-60",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-4 h-4 w-4 shrink-0"
+                    checked={selectedItemIds.includes(item.id)}
+                    onChange={() => toggleSelected(item.id)}
+                  />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getItemImageSrc(item.thumbnail_url ?? item.image_url)}
+                    alt={item.name}
+                    className="h-12 w-12 shrink-0 rounded-md bg-gray-100 object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-gray-900">
+                        {item.name}
+                      </span>
+                      {item.hidden ? (
+                        <span className="shrink-0 rounded bg-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600">
+                          Hidden
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="truncate text-xs text-gray-500">
+                      {item.categories?.name ?? "Uncategorized"}
+                      {item.unit ? ` · ${item.unit}` : ""}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-gray-900">
+                      {formatPrice(item.price, currency)}
+                    </p>
+                  </div>
+                  <ItemActionsMenu
+                    item={item}
+                    disabled={isPending}
+                    onToggleHidden={handleToggleHidden}
+                    onRequestDelete={requestDelete}
+                  />
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="mt-4 flex items-center justify-between gap-3">
@@ -421,6 +478,35 @@ export function ItemsManager({
       ) : (
         <p className="text-gray-600">No items found. Create your first item.</p>
       )}
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete item?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            &ldquo;{deleteTarget?.name}&rdquo; will be permanently removed from
+            your catalog.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isPending}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
