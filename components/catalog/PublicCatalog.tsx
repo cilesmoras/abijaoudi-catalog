@@ -16,7 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/api-client";
 import { getDialCode } from "@/lib/countries";
-import type { Category, Item, Profile } from "@/lib/types";
+import { hasOptions, optionPriceRange, parseCartKey } from "@/lib/options";
+import type { Category, Item, ItemOption, Profile } from "@/lib/types";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
 import { MessageCircle, Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
@@ -60,11 +61,13 @@ export function PublicCatalog({
     });
   }, [items, selectedCategory, search]);
 
-  function setQuantity(itemId: string, quantity: number) {
+  // Cart keys: bare item id for plain items, `${itemId}::${optionId}` for a
+  // chosen option — mixed choices of one item are separate lines.
+  function setQuantity(key: string, quantity: number) {
     setCart((current) => {
       const next = { ...current };
-      if (quantity <= 0) delete next[itemId];
-      else next[itemId] = quantity;
+      if (quantity <= 0) delete next[key];
+      else next[key] = quantity;
       return next;
     });
   }
@@ -73,22 +76,33 @@ export function PublicCatalog({
     setCart({});
   }
 
+  type CartEntry = {
+    key: string;
+    item: Item;
+    option: ItemOption | null;
+    qty: number;
+  };
+
   const cartEntries = useMemo(
     () =>
       Object.entries(cart)
-        .map(([id, qty]) => {
-          const item = items.find((i) => i.id === id);
-          return item ? { item, qty } : null;
+        .map(([key, qty]) => {
+          const { itemId, optionId } = parseCartKey(key);
+          const item = items.find((i) => i.id === itemId);
+          if (!item) return null;
+          const option = optionId
+            ? (item.options?.find((o) => o.id === optionId) ?? null)
+            : null;
+          if (optionId && !option) return null;
+          return { key, item, option, qty };
         })
-        .filter(
-          (entry): entry is { item: Item; qty: number } => entry !== null,
-        ),
+        .filter((entry): entry is CartEntry => entry !== null),
     [cart, items],
   );
 
   const totalCount = cartEntries.reduce((sum, e) => sum + e.qty, 0);
   const totalPrice = cartEntries.reduce(
-    (sum, e) => sum + e.qty * e.item.price,
+    (sum, e) => sum + e.qty * (e.option?.price ?? e.item.price),
     0,
   );
 
@@ -105,9 +119,10 @@ export function PublicCatalog({
 
   function orderOnWhatsApp() {
     if (!phoneDigits || cartEntries.length === 0) return;
-    const lines = cartEntries.map(
-      (e) =>
-        `• ${e.qty}x ${e.item.name} (${formatPrice(e.item.price, profile.currency)})`,
+    const lines = cartEntries.map((e) =>
+      e.option
+        ? `• ${e.qty}x ${e.item.name} — ${e.option.name} (${formatPrice(e.option.price, profile.currency)})`
+        : `• ${e.qty}x ${e.item.name} (${formatPrice(e.item.price, profile.currency)})`,
     );
     const message = [
       `Hi ${profile.catalog_name}, I'd like to order:`,
@@ -152,7 +167,21 @@ export function PublicCatalog({
           {filteredItems.length > 0 ? (
             <section className="grid justify-between gap-4 pb-28 grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(150px,200px))]">
               {filteredItems.map((item) => {
+                const itemHasOptions = hasOptions(item);
                 const qty = cart[item.id] ?? 0;
+                // For option items, count every chosen line of this item.
+                const optionQty = itemHasOptions
+                  ? Object.entries(cart).reduce(
+                      (sum, [key, value]) =>
+                        key.startsWith(`${item.id}::`) ? sum + value : sum,
+                      0,
+                    )
+                  : 0;
+                const range = optionPriceRange(item);
+                const rangeText =
+                  range && range.min !== range.max
+                    ? `${formatPrice(range.min, profile.currency)} – ${formatPrice(range.max, profile.currency)}`
+                    : formatPrice(range?.min ?? item.price, profile.currency);
                 return (
                   <Card
                     key={item.id}
@@ -178,7 +207,7 @@ export function PublicCatalog({
                         </span>
                       ) : null}
                     </button>
-                    <CardContent className="flex flex-1 flex-col gap-1 p-4">
+                    <CardContent className="@container flex flex-1 flex-col gap-1 p-4">
                       <span className="text-xs font-medium uppercase tracking-wide text-blue-600">
                         {item.categories?.name ?? "Uncategorized"}
                       </span>
@@ -193,17 +222,29 @@ export function PublicCatalog({
                           {item.description}
                         </p>
                       ) : null}
-                      <p className="mt-auto pt-2 text-lg font-bold text-blue-700">
-                        {formatPrice(item.price, profile.currency)}
+                      {/* Ranges are wide, so the price scales with the card
+                          (container query) instead of crowding narrow cells. */}
+                      <p className="mt-auto pt-2 text-base font-bold text-blue-700 @[13rem]:text-lg">
+                        {rangeText}
                         {item.unit ? (
-                          <span className="ml-1 text-sm font-medium text-gray-500">
+                          <span className="ml-1 text-xs font-medium text-gray-500 @[13rem]:text-sm">
                             / {item.unit}
                           </span>
                         ) : null}
                       </p>
 
                       {phoneDigits ? (
-                        qty > 0 ? (
+                        itemHasOptions ? (
+                          <Button
+                            variant="outline"
+                            className="mt-3 w-full"
+                            onClick={() => openItem(item)}
+                          >
+                            {optionQty > 0
+                              ? `Add to order · ${optionQty} in cart`
+                              : "Add to order"}
+                          </Button>
+                        ) : qty > 0 ? (
                           <div className="mt-3 flex items-center justify-between gap-2">
                             <Button
                               variant="outline"
@@ -270,17 +311,20 @@ export function PublicCatalog({
           {cartEntries.length > 0 ? (
             <>
               <ul className="divide-y">
-                {cartEntries.map(({ item, qty }) => (
+                {cartEntries.map(({ key, item, option, qty }) => (
                   <li
-                    key={item.id}
+                    key={key}
                     className="flex items-center justify-between gap-3 py-3"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium text-gray-900">
-                        {item.name}
+                        {option ? `${item.name} — ${option.name}` : item.name}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {formatPrice(item.price * qty, profile.currency)}
+                        {formatPrice(
+                          (option?.price ?? item.price) * qty,
+                          profile.currency,
+                        )}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -288,7 +332,7 @@ export function PublicCatalog({
                         variant="outline"
                         size="icon"
                         aria-label="Decrease quantity"
-                        onClick={() => setQuantity(item.id, qty - 1)}
+                        onClick={() => setQuantity(key, qty - 1)}
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -299,7 +343,7 @@ export function PublicCatalog({
                         variant="outline"
                         size="icon"
                         aria-label="Increase quantity"
-                        onClick={() => setQuantity(item.id, qty + 1)}
+                        onClick={() => setQuantity(key, qty + 1)}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -346,7 +390,7 @@ export function PublicCatalog({
           if (!next) setActiveItem(null);
         }}
         currency={profile.currency}
-        qty={activeItem ? (cart[activeItem.id] ?? 0) : 0}
+        cart={cart}
         onSetQuantity={setQuantity}
         canOrder={Boolean(phoneDigits)}
       />

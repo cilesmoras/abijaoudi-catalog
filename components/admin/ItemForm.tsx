@@ -20,6 +20,7 @@ import type {
   Plan,
 } from "@/lib/types";
 import { isPro } from "@/lib/plans";
+import { MAX_OPTIONS_PER_ITEM, MIN_OPTIONS_PER_ITEM } from "@/lib/options";
 import { getItemImageSrc } from "@/lib/utils";
 import { ArrowDown, ArrowUp, Star, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
@@ -63,6 +64,28 @@ export function ItemForm({
   );
   const [price, setPrice] = useState(initialValues?.price?.toString() ?? "");
   const [unit, setUnit] = useState(initialValues?.unit ?? "");
+
+  // Option group (menu-style variants). When enabled, each choice carries its
+  // own full price and the single price input above is hidden; the server
+  // stores min(choice prices) on items.price.
+  const initialOptions = [...(initialValues?.options ?? [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+  const hadOptions = initialOptions.length > 0;
+  const [optionsEnabled, setOptionsEnabled] = useState(hadOptions);
+  const [optionsLabel, setOptionsLabel] = useState(
+    initialValues?.options_label ?? "",
+  );
+  const [optionRows, setOptionRows] = useState<
+    { name: string; price: string }[]
+  >(() =>
+    hadOptions
+      ? initialOptions.map((option) => ({
+          name: option.name,
+          price: option.price.toString(),
+        }))
+      : [],
+  );
   const [categoryId, setCategoryId] = useState(
     initialValues?.category_id ?? EMPTY_CATEGORY,
   );
@@ -141,6 +164,59 @@ export function ItemForm({
     } finally {
       setUploadingPhotos(false);
     }
+  }
+
+  function toggleOptions(enabled: boolean) {
+    setOptionsEnabled(enabled);
+    if (enabled && optionRows.length === 0) {
+      setOptionRows([
+        { name: "", price: "" },
+        { name: "", price: "" },
+      ]);
+    }
+  }
+
+  function updateOptionRow(
+    index: number,
+    patch: Partial<{ name: string; price: string }>,
+  ) {
+    setOptionRows((current) =>
+      current.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  }
+
+  function moveOptionRow(index: number, direction: -1 | 1) {
+    setOptionRows((current) => {
+      const next = [...current];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return current;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  function removeOptionRow(index: number) {
+    setOptionRows((current) => current.filter((_, i) => i !== index));
+  }
+
+  // Mirrors the server-side rules in lib/item-options.ts so errors are instant.
+  function validateOptions(): string | null {
+    if (!optionsLabel.trim()) return "Option group label is required";
+    if (optionRows.length < MIN_OPTIONS_PER_ITEM)
+      return "Add at least two choices";
+    if (optionRows.length > MAX_OPTIONS_PER_ITEM)
+      return `Up to ${MAX_OPTIONS_PER_ITEM} choices per item`;
+    const seen = new Set<string>();
+    for (const row of optionRows) {
+      const rowName = row.name.trim();
+      if (!rowName) return "Every choice needs a name";
+      if (seen.has(rowName.toLowerCase())) return "Choice names must be unique";
+      seen.add(rowName.toLowerCase());
+      const rowPrice = Number(row.price);
+      if (!row.price.trim() || !Number.isFinite(rowPrice) || rowPrice < 0)
+        return "Every choice needs a valid price";
+    }
+    return null;
   }
 
   function movePhoto(index: number, direction: -1 | 1) {
@@ -267,7 +343,13 @@ export function ItemForm({
       return;
     }
 
-    if (!Number.isFinite(parsedPrice)) {
+    if (optionsEnabled) {
+      const optionsError = validateOptions();
+      if (optionsError) {
+        setError(optionsError);
+        return;
+      }
+    } else if (!Number.isFinite(parsedPrice)) {
       setError("A valid price is required");
       return;
     }
@@ -277,12 +359,26 @@ export function ItemForm({
       return;
     }
 
+    // With options, choice prices are the pricing; send the min as the item
+    // price (the server recomputes it authoritatively).
+    const options = optionsEnabled
+      ? optionRows.map((row, index) => ({
+          name: row.name.trim(),
+          price: Number(row.price),
+          sort_order: index,
+        }))
+      : null;
+
     const base = {
       name: name.trim(),
       description: description.trim() ? description.trim() : null,
-      price: parsedPrice,
+      price: options
+        ? Math.min(...options.map((option) => option.price))
+        : parsedPrice,
       unit: unit.trim() ? unit.trim() : null,
       category_id: categoryId,
+      options_label: options ? optionsLabel.trim() : null,
+      options,
     };
 
     // Pro: the gallery is the source of truth; the first photo is the cover
@@ -360,19 +456,126 @@ export function ItemForm({
         />
       </div>
 
+      {!optionsEnabled ? (
+        <div className="space-y-2">
+          <Label htmlFor="price">Price</Label>
+          <Input
+            id="price"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={price}
+            onChange={(event) => setPrice(event.target.value)}
+            placeholder="0.00"
+            required
+          />
+        </div>
+      ) : null}
+
       <div className="space-y-2">
-        <Label htmlFor="price">Price</Label>
-        <Input
-          id="price"
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="0.01"
-          value={price}
-          onChange={(event) => setPrice(event.target.value)}
-          placeholder="0.00"
-          required
-        />
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={optionsEnabled}
+            onChange={(event) => toggleOptions(event.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 accent-blue-600"
+          />
+          This item has options (e.g. sizes or variants)
+        </label>
+        {hadOptions && !optionsEnabled ? (
+          <p className="text-xs text-amber-600">
+            Turning this off deletes the choices when you save.
+          </p>
+        ) : null}
+
+        {optionsEnabled ? (
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="space-y-2">
+              <Label htmlFor="options-label">Option group label</Label>
+              <Input
+                id="options-label"
+                value={optionsLabel}
+                onChange={(event) => setOptionsLabel(event.target.value)}
+                placeholder="e.g. Size, Patty, Flavor"
+              />
+            </div>
+
+            <div className="space-y-2">
+              {optionRows.map((row, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={row.name}
+                    onChange={(event) =>
+                      updateOptionRow(index, { name: event.target.value })
+                    }
+                    placeholder={index === 0 ? "e.g. Small" : "e.g. Large"}
+                    aria-label={`Choice ${index + 1} name`}
+                  />
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={row.price}
+                    onChange={(event) =>
+                      updateOptionRow(index, { price: event.target.value })
+                    }
+                    placeholder="0.00"
+                    aria-label={`Choice ${index + 1} price`}
+                    className="w-28 shrink-0"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Move choice up"
+                    onClick={() => moveOptionRow(index, -1)}
+                    disabled={index === 0}
+                    className="rounded p-1 text-gray-500 hover:text-gray-900 disabled:opacity-30"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Move choice down"
+                    onClick={() => moveOptionRow(index, 1)}
+                    disabled={index === optionRows.length - 1}
+                    className="rounded p-1 text-gray-500 hover:text-gray-900 disabled:opacity-30"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Remove choice"
+                    onClick={() => removeOptionRow(index)}
+                    className="rounded p-1 text-gray-500 hover:text-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {optionRows.length < MAX_OPTIONS_PER_ITEM ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setOptionRows((current) => [
+                    ...current,
+                    { name: "", price: "" },
+                  ])
+                }
+              >
+                + Add choice
+              </Button>
+            ) : null}
+            <p className="text-xs text-gray-500">
+              Each choice has its own full price; it replaces the single price
+              above. Buyers pick one choice when ordering.
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-2">

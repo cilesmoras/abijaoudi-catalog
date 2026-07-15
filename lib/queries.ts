@@ -2,8 +2,15 @@ import "server-only";
 
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { categories, itemImages, items, profiles } from "@/lib/db/schema";
-import type { Category, Item, ItemImage, Plan, Profile } from "@/lib/types";
+import { categories, itemImages, itemOptions, items, profiles } from "@/lib/db/schema";
+import type {
+  Category,
+  Item,
+  ItemImage,
+  ItemOption,
+  Plan,
+  Profile,
+} from "@/lib/types";
 
 function toIsoString(value: string | Date) {
   return value instanceof Date
@@ -22,6 +29,7 @@ const itemSelection = {
   description: items.description,
   price: items.price,
   unit: items.unit,
+  options_label: items.optionsLabel,
   image_url: items.imageUrl,
   thumbnail_url: items.thumbnailUrl,
   hidden: items.hidden,
@@ -41,6 +49,7 @@ type ItemRow = {
   description: string | null;
   price: number;
   unit: string | null;
+  options_label: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
   hidden: boolean;
@@ -57,6 +66,7 @@ export function mapItemRow(row: ItemRow): Item {
     description: row.description,
     price: row.price,
     unit: row.unit,
+    options_label: row.options_label,
     image_url: row.image_url,
     thumbnail_url: row.thumbnail_url,
     hidden: row.hidden,
@@ -142,6 +152,37 @@ async function attachImages(rows: Item[]): Promise<Item[]> {
   return rows.map((row) => ({ ...row, images: byItem.get(row.id) ?? [] }));
 }
 
+/** Loads option choices for the given items and attaches them, sorted. */
+async function attachOptions(rows: Item[]): Promise<Item[]> {
+  if (rows.length === 0) return rows;
+  const ids = rows.map((row) => row.id);
+  const optionRows = await db
+    .select({
+      id: itemOptions.id,
+      item_id: itemOptions.itemId,
+      name: itemOptions.name,
+      price: itemOptions.price,
+      sort_order: itemOptions.sortOrder,
+    })
+    .from(itemOptions)
+    .where(inArray(itemOptions.itemId, ids))
+    .orderBy(asc(itemOptions.sortOrder));
+
+  const byItem = new Map<string, ItemOption[]>();
+  for (const option of optionRows) {
+    const list = byItem.get(option.item_id) ?? [];
+    list.push({
+      id: option.id,
+      name: option.name,
+      price: Number(option.price),
+      sort_order: Number(option.sort_order),
+    });
+    byItem.set(option.item_id, list);
+  }
+
+  return rows.map((row) => ({ ...row, options: byItem.get(row.id) ?? [] }));
+}
+
 export async function getItemsForOwner(ownerId: string): Promise<Item[]> {
   const rows = await db
     .select(itemSelection)
@@ -149,7 +190,7 @@ export async function getItemsForOwner(ownerId: string): Promise<Item[]> {
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(eq(items.ownerId, ownerId))
     .orderBy(asc(items.name));
-  return attachImages(rows.map(mapItemRow));
+  return attachOptions(await attachImages(rows.map(mapItemRow)));
 }
 
 /** Total item count for an owner — used to enforce the Free plan item limit. */
@@ -169,7 +210,7 @@ export async function getVisibleItemsForOwner(ownerId: string): Promise<Item[]> 
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(and(eq(items.ownerId, ownerId), eq(items.hidden, false)))
     .orderBy(asc(items.name));
-  return attachImages(rows.map(mapItemRow));
+  return attachOptions(await attachImages(rows.map(mapItemRow)));
 }
 
 export async function getItemForOwner(
@@ -182,7 +223,9 @@ export async function getItemForOwner(
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(and(eq(items.id, id), eq(items.ownerId, ownerId)));
   if (!row) return null;
-  const [withImages] = await attachImages([mapItemRow(row)]);
+  const [withImages] = await attachOptions(
+    await attachImages([mapItemRow(row)]),
+  );
   return withImages;
 }
 

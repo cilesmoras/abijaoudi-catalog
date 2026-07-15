@@ -90,6 +90,11 @@ export const items = pgTable("items", {
   description: text("description"),
   price: numeric("price", { precision: 10, scale: 2, mode: "number" }).notNull(),
   unit: text("unit"),
+  // Label for the item's single option group (e.g. "Size", "Patty"). Null when
+  // the item has no options. When options exist, `price` holds the denormalized
+  // min(choice prices) — "has options" is signaled by item_options rows, never
+  // by price.
+  optionsLabel: text("options_label"),
   imageUrl: text("image_url"),
   thumbnailUrl: text("thumbnail_url"),
   hidden: boolean("hidden").notNull().default(false),
@@ -118,6 +123,28 @@ export const itemImages = pgTable(
       .notNull(),
   },
   (table) => [uniqueIndex("item_images_item_sort_key").on(table.itemId, table.sortOrder)],
+);
+
+// Priced choices for an item's single option group (menu-style variants, e.g.
+// Size: Small/Medium/Large). The group label lives on items.optionsLabel.
+export const itemOptions = pgTable(
+  "item_options",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerId: uuid("owner_id")
+      .references(() => profiles.id, { onDelete: "cascade" })
+      .notNull(),
+    itemId: uuid("item_id")
+      .references(() => items.id, { onDelete: "cascade" })
+      .notNull(),
+    name: text("name").notNull(),
+    price: numeric("price", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    sortOrder: numeric("sort_order", { mode: "number" }).notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [uniqueIndex("item_options_item_sort_key").on(table.itemId, table.sortOrder)],
 );
 
 // Pro-only analytics events for the public catalog. `view` is a catalog page
@@ -157,6 +184,7 @@ export const itemsRelations = relations(items, ({ one, many }) => ({
     references: [categories.id],
   }),
   images: many(itemImages),
+  options: many(itemOptions),
 }));
 
 export const itemImagesRelations = relations(itemImages, ({ one }) => ({
@@ -166,6 +194,17 @@ export const itemImagesRelations = relations(itemImages, ({ one }) => ({
   }),
   owner: one(profiles, {
     fields: [itemImages.ownerId],
+    references: [profiles.id],
+  }),
+}));
+
+export const itemOptionsRelations = relations(itemOptions, ({ one }) => ({
+  item: one(items, {
+    fields: [itemOptions.itemId],
+    references: [items.id],
+  }),
+  owner: one(profiles, {
+    fields: [itemOptions.ownerId],
     references: [profiles.id],
   }),
 }));

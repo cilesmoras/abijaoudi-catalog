@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { itemImages, items } from "@/lib/db/schema";
 import { deleteItemImages } from "@/lib/storage";
 import { syncItemImages } from "@/lib/item-images";
+import { syncItemOptions, validateItemOptions } from "@/lib/item-options";
 import {
   categoryBelongsToOwner,
   countItemsForOwner,
@@ -29,7 +30,15 @@ export async function createItemAction(
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Unauthorized" };
 
-  if (!values.name?.trim() || !Number.isFinite(values.price)) {
+  if (!values.name?.trim()) {
+    return { error: "Name and price are required" };
+  }
+
+  // With options, choice prices are the pricing and items.price becomes the
+  // denormalized min; without them the single price is required as before.
+  const optionsResult = validateItemOptions(values.options_label, values.options);
+  if (!optionsResult.ok) return { error: optionsResult.error };
+  if (optionsResult.minPrice === null && !Number.isFinite(values.price)) {
     return { error: "Name and price are required" };
   }
 
@@ -54,8 +63,9 @@ export async function createItemAction(
       ownerId: profile.id,
       name: values.name.trim(),
       description: values.description,
-      price: Number(values.price),
+      price: optionsResult.minPrice ?? Number(values.price),
       unit: values.unit || null,
+      optionsLabel: optionsResult.label,
       categoryId: values.category_id || null,
       imageUrl: values.image_url || null,
       thumbnailUrl: values.thumbnail_url || null,
@@ -63,6 +73,7 @@ export async function createItemAction(
     .returning({ id: items.id });
 
   await syncItemImages(profile.id, created.id, profile.plan, values.images);
+  await syncItemOptions(profile.id, created.id, optionsResult.options);
 
   const item = await getItemForOwner(profile.id, created.id);
   if (!item) return { error: "Failed to load the created item" };
@@ -82,6 +93,12 @@ export async function updateItemAction(
 ): Promise<ActionResult<Item>> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Unauthorized" };
+
+  const optionsResult = validateItemOptions(values.options_label, values.options);
+  if (!optionsResult.ok) return { error: optionsResult.error };
+  if (optionsResult.minPrice === null && !Number.isFinite(values.price)) {
+    return { error: "A price is required" };
+  }
 
   if (
     values.category_id &&
@@ -107,8 +124,9 @@ export async function updateItemAction(
     .set({
       name: values.name,
       description: values.description,
-      price: Number(values.price),
+      price: optionsResult.minPrice ?? Number(values.price),
       unit: values.unit || null,
+      optionsLabel: optionsResult.label,
       categoryId: values.category_id || null,
       imageUrl: values.image_url || null,
       thumbnailUrl: values.thumbnail_url || null,
@@ -116,6 +134,7 @@ export async function updateItemAction(
     .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
 
   await syncItemImages(profile.id, id, profile.plan, values.images);
+  await syncItemOptions(profile.id, id, optionsResult.options);
 
   const oldUrls = [
     oldItem.imageUrl,

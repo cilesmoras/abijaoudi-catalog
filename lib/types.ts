@@ -43,14 +43,26 @@ export type ItemImage = {
   sort_order: number;
 };
 
+// A priced choice in an item's single option group (e.g. "Small" in "Size").
+export type ItemOption = {
+  id: string;
+  name: string;
+  price: number;
+  sort_order: number;
+};
+
 export type Item = {
   id: string;
   owner_id: string;
   category_id: string | null;
   name: string;
   description: string | null;
+  // For items with options this is the denormalized min(choice prices);
+  // the presence of options is signaled by `options`, never by price.
   price: number;
   unit: string | null;
+  // Label for the option group (e.g. "Size"). Null when the item has no options.
+  options_label: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
   hidden: boolean;
@@ -58,12 +70,20 @@ export type Item = {
   categories?: ItemCategoryPreview | null;
   // Pro-only additional photos beyond the cover (image_url). Empty for Free.
   images?: ItemImage[];
+  options?: ItemOption[];
 };
 
 // A single gallery photo in an item create/update payload.
 export type ItemImageValue = {
   url: string;
   thumbnail_url: string | null;
+  sort_order: number;
+};
+
+// A choice in an item create/update payload.
+export type ItemOptionValue = {
+  name: string;
+  price: number;
   sort_order: number;
 };
 
@@ -78,4 +98,6 @@ export type ItemFormValues = {
   image_url: string | null;
   thumbnail_url: string | null;
   images?: ItemImageValue[] | null;
+  options_label?: string | null;
+  options?: ItemOptionValue[] | null;
 };

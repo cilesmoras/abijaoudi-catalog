@@ -49,6 +49,8 @@ export function EditItemForm({
           description: item.description,
           price: item.price,
           unit: item.unit,
+          options_label: item.options_label,
+          options: item.options,
           category_id: item.category_id,
           image_url: item.image_url,
           thumbnail_url: item.thumbnail_url,

@@ -34,7 +34,17 @@ import {
 } from "@/components/ui/select";
 import type { Category, Item, Plan } from "@/lib/types";
 import { FREE_ITEM_LIMIT, isPro } from "@/lib/plans";
+import { optionPriceRange } from "@/lib/options";
 import { cn, formatPrice, getItemImageSrc } from "@/lib/utils";
+
+// Items with options show their choice-price range; plain items a single price.
+function priceLabel(item: Item, currency: string | null) {
+  const range = optionPriceRange(item);
+  if (!range) return formatPrice(item.price, currency);
+  return range.min === range.max
+    ? formatPrice(range.min, currency)
+    : `${formatPrice(range.min, currency)} – ${formatPrice(range.max, currency)}`;
+}
 
 const PAGE_SIZE = 10;
 const ALL_CATEGORIES = "all";
@@ -360,7 +370,7 @@ export function ItemsManager({
                       {item.categories?.name ?? "Uncategorized"}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      {formatPrice(item.price, currency)}
+                      {priceLabel(item, currency)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
                       {item.unit ?? "—"}
@@ -429,7 +439,7 @@ export function ItemsManager({
                       {item.unit ? ` · ${item.unit}` : ""}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">
-                      {formatPrice(item.price, currency)}
+                      {priceLabel(item, currency)}
                     </p>
                   </div>
                   <ItemActionsMenu

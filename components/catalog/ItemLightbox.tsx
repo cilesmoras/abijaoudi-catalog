@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cartKey, hasOptions, optionPriceRange } from "@/lib/options";
 import type { Item } from "@/lib/types";
 import { formatPrice, getItemImageSrc } from "@/lib/utils";
 
@@ -17,8 +18,9 @@ interface ItemLightboxProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currency: string | null;
-  qty: number;
-  onSetQuantity: (itemId: string, qty: number) => void;
+  /** Quantities keyed by cart key (item id, or `${itemId}::${optionId}`). */
+  cart: Record<string, number>;
+  onSetQuantity: (key: string, qty: number) => void;
   canOrder: boolean;
 }
 
@@ -34,21 +36,42 @@ export function ItemLightbox({
   open,
   onOpenChange,
   currency,
-  qty,
+  cart,
   onSetQuantity,
   canOrder,
 }: ItemLightboxProps) {
   const [index, setIndex] = useState(0);
+  // Buyers must pick a choice explicitly — nothing is pre-selected.
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
-  // Reset to the first photo whenever a different item is opened.
-  useEffect(() => {
+  // Reset to the first photo and clear the choice whenever a different item is
+  // opened. Adjusting state during render (instead of an effect) avoids a
+  // cascading re-render; the item goes null on close, so reopening resets too.
+  const [prevItemId, setPrevItemId] = useState(item?.id ?? null);
+  if ((item?.id ?? null) !== prevItemId) {
+    setPrevItemId(item?.id ?? null);
     setIndex(0);
-  }, [item?.id]);
+    setSelectedOptionId(null);
+  }
 
   if (!item) return null;
 
   const photos = photosFor(item);
   const safeIndex = Math.min(index, photos.length - 1);
+
+  const itemHasOptions = hasOptions(item);
+  const options = item.options ?? [];
+  const selectedOption =
+    options.find((option) => option.id === selectedOptionId) ?? null;
+  const key = cartKey(item.id, selectedOption?.id);
+  const qty = cart[key] ?? 0;
+
+  const range = optionPriceRange(item);
+  const priceText = selectedOption
+    ? formatPrice(selectedOption.price, currency)
+    : range && range.min !== range.max
+      ? `${formatPrice(range.min, currency)} – ${formatPrice(range.max, currency)}`
+      : formatPrice(range?.min ?? item.price, currency);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,8 +140,37 @@ export function ItemLightbox({
           {item.description ? (
             <p className="text-sm text-gray-600">{item.description}</p>
           ) : null}
+
+          {itemHasOptions ? (
+            <div className="space-y-1.5 pt-1">
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                {item.options_label ?? "Options"}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {options.map((option) => {
+                  const selected = option.id === selectedOptionId;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setSelectedOptionId(option.id)}
+                      className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                        selected
+                          ? "border-blue-600 bg-blue-50 font-medium text-blue-700"
+                          : "border-gray-300 text-gray-700 hover:border-gray-400"
+                      }`}
+                    >
+                      {option.name} · {formatPrice(option.price, currency)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <p className="pt-1 text-xl font-bold text-blue-700">
-            {formatPrice(item.price, currency)}
+            {priceText}
             {item.unit ? (
               <span className="ml-1 text-sm font-medium text-gray-500">
                 / {item.unit}
@@ -134,7 +186,7 @@ export function ItemLightbox({
                 variant="outline"
                 size="icon"
                 aria-label="Decrease quantity"
-                onClick={() => onSetQuantity(item.id, qty - 1)}
+                onClick={() => onSetQuantity(key, qty - 1)}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -143,19 +195,28 @@ export function ItemLightbox({
                 variant="outline"
                 size="icon"
                 aria-label="Increase quantity"
-                onClick={() => onSetQuantity(item.id, qty + 1)}
+                onClick={() => onSetQuantity(key, qty + 1)}
               >
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
           ) : (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => onSetQuantity(item.id, 1)}
-            >
-              Add to order
-            </Button>
+            <div className="space-y-1.5">
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={itemHasOptions && !selectedOption}
+                onClick={() => onSetQuantity(key, 1)}
+              >
+                Add to order
+              </Button>
+              {itemHasOptions && !selectedOption ? (
+                <p className="text-center text-xs text-gray-500">
+                  Choose a {(item.options_label ?? "option").toLowerCase()}{" "}
+                  first
+                </p>
+              ) : null}
+            </div>
           )
         ) : null}
       </DialogContent>
