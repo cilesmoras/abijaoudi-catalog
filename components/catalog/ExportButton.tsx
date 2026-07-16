@@ -97,12 +97,11 @@ export function ExportButton({
       // Pro: draw the owner's logo at the left of the header band.
       if (isPro(plan) && logoUrl) {
         try {
-          const logoData = await fetchImageAsDataUrl(logoUrl);
-          const { w: lw, h: lh } = await getImageSize(logoData);
+          const logo = await prepareJpegForPdf(logoUrl);
           const maxH = 14;
           const drawH = maxH;
-          const drawW = (lw / lh) * drawH;
-          doc.addImage(logoData, "JPEG", margin, 3, drawW, drawH);
+          const drawW = (logo.w / logo.h) * drawH;
+          doc.addImage(logo.dataUrl, "JPEG", margin, 3, drawW, drawH);
         } catch {
           // If the logo can't be fetched, just skip it — the title still shows.
         }
@@ -217,10 +216,11 @@ export function ExportButton({
 
           if (item.image_url) {
             try {
-              // Images are pre-sized, compressed, and EXIF-corrected on upload,
-              // so embed the JPEG bytes directly (no PNG re-encode = small PDF).
-              const imgData = await fetchImageAsDataUrl(item.image_url);
-              const { w: natW, h: natH } = await getImageSize(imgData);
+              const {
+                dataUrl: imgData,
+                w: natW,
+                h: natH,
+              } = await prepareJpegForPdf(item.image_url);
               // cover: scale up until both dimensions fill the area
               const scale = Math.max(cardW / natW, imageAreaH / natH);
               const drawW = natW * scale;
@@ -388,14 +388,56 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   });
 }
 
+// Longest edge for images embedded in the PDF: cards are ~42.5mm square, so
+// 500px ≈ 300dpi. Stored covers can be much larger (crisp on-screen catalog),
+// which would bloat the PDF ~9x if embedded verbatim.
+const PDF_IMAGE_MAX = 500;
+// Sources at or below this are embedded byte-identical (no re-encode) — the
+// resize wouldn't shrink them meaningfully and re-encoding only loses quality.
+const PDF_RESIZE_THRESHOLD = 600;
+
 /**
- * Reads an image's natural dimensions (needed for object-cover scaling) without
- * re-encoding it. Orientation is already baked in by sharp at upload time.
+ * Fetches an image and, if it's larger than the PDF needs, downscales it to
+ * `PDF_IMAGE_MAX` via canvas. Orientation is already baked in by sharp at
+ * upload time. Falls back to the original bytes if canvas work fails (e.g.
+ * iOS Safari memory limits) — a bigger PDF beats a broken export.
  */
-function getImageSize(dataUrl: string): Promise<{ w: number; h: number }> {
+async function prepareJpegForPdf(
+  url: string,
+): Promise<{ dataUrl: string; w: number; h: number }> {
+  const original = await fetchImageAsDataUrl(url);
+  const img = await loadImage(original);
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  if (Math.max(w, h) <= PDF_RESIZE_THRESHOLD) {
+    return { dataUrl: original, w, h };
+  }
+  try {
+    const scale = PDF_IMAGE_MAX / Math.max(w, h);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No 2d context");
+    // White-fill first so transparent sources (e.g. PNG logos) don't get a
+    // black background from the JPEG encode.
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const resized = canvas.toDataURL("image/jpeg", 0.8);
+    if (!resized.startsWith("data:image/jpeg")) {
+      throw new Error("Canvas JPEG encode failed");
+    }
+    return { dataUrl: resized, w: canvas.width, h: canvas.height };
+  } catch {
+    return { dataUrl: original, w, h };
+  }
+}
+
+function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = dataUrl;
   });

@@ -20,6 +20,7 @@
     "db:migrate:pro-expiry": "node scripts/add-pro-expiry.mjs",
     "db:migrate:options": "node scripts/add-item-options.mjs",
     "set-plan": "node scripts/set-plan.mjs",
+    "backfill:covers": "node scripts/backfill-catalog-covers.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
