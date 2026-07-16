@@ -99,19 +99,27 @@ const previewProducts = [
   {
     name: "Sourdough loaf",
     price: "$6.50",
+    image: "/demo/sourdough.jpg",
     tint: "from-amber-200 to-orange-300",
   },
   {
     name: "Almond croissant",
     price: "$4.00",
+    image: "/demo/almond-croissant.jpg",
     tint: "from-rose-200 to-pink-300",
   },
   {
     name: "Cinnamon roll",
     price: "$3.75",
+    image: "/demo/cinnamon-roll.jpg",
     tint: "from-yellow-200 to-amber-300",
   },
-  { name: "Baguette", price: "$3.20", tint: "from-orange-200 to-amber-300" },
+  {
+    name: "Baguette",
+    price: "$3.20",
+    image: "/demo/baguette.jpg",
+    tint: "from-orange-200 to-amber-300",
+  },
 ];
 
 export default async function LandingPage() {
@@ -249,8 +257,16 @@ export default async function LandingPage() {
                     className="rounded-xl border border-gray-100 bg-white p-2 shadow-sm"
                   >
                     <div
-                      className={`h-16 w-full rounded-lg bg-gradient-to-br ${product.tint}`}
-                    />
+                      className={`relative h-16 w-full overflow-hidden rounded-lg bg-gradient-to-br ${product.tint}`}
+                    >
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        sizes="(max-width: 640px) 50vw, 120px"
+                        className="object-cover"
+                      />
+                    </div>
                     <p className="mt-2 truncate text-xs font-medium text-gray-800">
                       {product.name}
                     </p>
