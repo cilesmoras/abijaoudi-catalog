@@ -8,17 +8,23 @@ type OAuthButtonProps = {
   provider: "google" | "facebook";
   label: string;
   icon: ReactNode;
+  /** Path to return to after the callback exchanges the code. */
+  next?: string | null;
 };
 
-export function OAuthButton({ provider, label, icon }: OAuthButtonProps) {
+export function OAuthButton({ provider, label, icon, next }: OAuthButtonProps) {
   const [loading, setLoading] = useState(false);
 
   async function signIn() {
     setLoading(true);
     const supabase = createClient();
+    const callback = new URL("/auth/callback", window.location.origin);
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      callback.searchParams.set("next", next);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callback.toString() },
     });
     if (error) setLoading(false);
   }

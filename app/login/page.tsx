@@ -10,6 +10,21 @@ import { OAuthButton } from "@/components/auth/OAuthButton";
 import { GoogleIcon, FacebookIcon } from "@/components/auth/provider-icons";
 import { createClient } from "@/utils/supabase/client";
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  auth: "We could not complete that sign-in. Please try again.",
+  missing_code: "That sign-in link was incomplete. Please try again.",
+  invalid_link:
+    "That link is invalid or has expired. Please request a new one.",
+  access_denied: "Sign-in was cancelled.",
+  server_error: "The sign-in provider had a problem. Please try again.",
+};
+
+function describeAuthError(code: string | null, detail: string | null) {
+  if (!code) return null;
+  const base = AUTH_ERROR_MESSAGES[code] ?? "Sign-in failed.";
+  return detail ? `${base} (${detail})` : base;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -17,6 +32,15 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const from = searchParams.get("from");
+  const nextPath =
+    from && from.startsWith("/") && !from.startsWith("//") ? from : null;
+  // Surfaced by app/auth/callback/route.ts when the OAuth exchange fails.
+  const callbackError = describeAuthError(
+    searchParams.get("error"),
+    searchParams.get("detail"),
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,9 +59,7 @@ function LoginForm() {
       return;
     }
 
-    const from = searchParams.get("from");
-    const target = from && from.startsWith("/") ? from : "/dashboard";
-    router.replace(target);
+    router.replace(nextPath ?? "/dashboard");
     router.refresh();
   }
 
@@ -51,16 +73,27 @@ function LoginForm() {
           Manage and share your catalog.
         </p>
 
+        {callbackError ? (
+          <div
+            role="alert"
+            className="mb-5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          >
+            {callbackError}
+          </div>
+        ) : null}
+
         <div className="space-y-3">
           <OAuthButton
             provider="google"
             label="Continue with Google"
             icon={<GoogleIcon />}
+            next={nextPath}
           />
           <OAuthButton
             provider="facebook"
             label="Continue with Facebook"
             icon={<FacebookIcon />}
+            next={nextPath}
           />
         </div>
 
@@ -112,7 +145,10 @@ function LoginForm() {
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-gray-900 hover:underline">
+          <Link
+            href="/signup"
+            className="font-medium text-gray-900 hover:underline"
+          >
             Sign up
           </Link>
         </p>
