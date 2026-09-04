@@ -9,6 +9,16 @@ const PROTECTED_PREFIXES = ["/dashboard", "/onboarding"];
 // Routes a logged-in user should be bounced away from.
 const AUTH_ONLY_PREFIXES = ["/login", "/signup"];
 
+// A redirect built from scratch would drop the refreshed auth cookies that
+// getUser() just set on `supabaseResponse`. Losing a rotated refresh token
+// means the next request replays the old one, and Supabase's reuse detection
+// can then revoke the whole session family — a silent, intermittent logout.
+function redirectWithCookies(url: URL, source: NextResponse) {
+  const response = NextResponse.redirect(url);
+  source.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+  return response;
+}
+
 function matchesPrefix(pathname: string, prefixes: string[]) {
   return prefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -47,14 +57,14 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("from", pathname);
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url, supabaseResponse);
   }
 
   if (user && matchesPrefix(pathname, AUTH_ONLY_PREFIXES)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectWithCookies(url, supabaseResponse);
   }
 
   return supabaseResponse;

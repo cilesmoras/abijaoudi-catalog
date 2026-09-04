@@ -13,6 +13,6 @@ export const config = {
      * - _next/static, _next/image (static assets)
      * - image / metadata files
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|icon.*|apple-icon.*|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|icon.*|apple-icon.*|manifest.webmanifest|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
