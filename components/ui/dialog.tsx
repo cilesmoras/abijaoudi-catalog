@@ -32,7 +32,14 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        // `grid-cols-[minmax(0,1fr)]` is load-bearing: without it the implicit
+        // `auto` column is floored by the min-content width of the widest row,
+        // so long unbreakable content (e.g. a `truncate`d name, which is
+        // `white-space: nowrap`) blows the track past the dialog and gets
+        // clipped by the horizontal overflow that `overflow-y-auto` implies.
+        // `w-[calc(100%-2rem)]` keeps a gutter on narrow screens, and `dvh`
+        // accounts for the mobile URL bar in a way `vh` does not.
+        "fixed left-[50%] top-[50%] z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] grid-cols-[minmax(0,1fr)] gap-4 overflow-y-auto rounded-lg border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
         className,
       )}
       {...props}
@@ -61,6 +68,29 @@ const DialogHeader = ({
 );
 DialogHeader.displayName = "DialogHeader";
 
+// Scrollable region for dialogs with long content. Pair it with a
+// `grid-rows-[auto_minmax(0,1fr)_auto]` on DialogContent so the header and
+// footer stay pinned and only this section scrolls. `min-h-0` lets the row
+// shrink below its content height, which grid otherwise refuses to do.
+const DialogBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("min-h-0 overflow-y-auto", className)} {...props} />
+);
+DialogBody.displayName = "DialogBody";
+
+const DialogFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn("flex flex-col gap-2 sm:flex-row", className)}
+    {...props}
+  />
+);
+DialogFooter.displayName = "DialogFooter";
+
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
@@ -78,8 +108,10 @@ DialogTitle.displayName = DialogPrimitive.Title.displayName;
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogOverlay,
   DialogPortal,

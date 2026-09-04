@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -303,77 +305,78 @@ export function PublicCatalog({
       ) : null}
 
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>
-        <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto">
+        <DialogContent className="max-w-md grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader>
             <DialogTitle>Your order</DialogTitle>
           </DialogHeader>
 
           {cartEntries.length > 0 ? (
             <>
-              <ul className="divide-y">
-                {cartEntries.map(({ key, item, option, qty }) => (
-                  <li
-                    key={key}
-                    className="flex items-center justify-between gap-3 py-3"
+              <DialogBody>
+                <ul className="divide-y">
+                  {cartEntries.map(({ key, item, option, qty }) => (
+                    <li
+                      key={key}
+                      className="flex items-center justify-between gap-3 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-gray-900">
+                          {option ? `${item.name} — ${option.name}` : item.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {formatPrice(
+                            (option?.price ?? item.price) * qty,
+                            profile.currency,
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          aria-label="Decrease quantity"
+                          onClick={() => setQuantity(key, qty - 1)}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="min-w-8 text-center font-medium">
+                          {qty}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          aria-label="Increase quantity"
+                          onClick={() => setQuantity(key, qty + 1)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </DialogBody>
+
+              <DialogFooter className="flex-col gap-3 sm:flex-col">
+                <div className="flex items-center justify-between border-t pt-3 text-base font-semibold">
+                  <span>Total</span>
+                  <span>{formatPrice(totalPrice, profile.currency)}</span>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="outline"
+                    className="gap-2 sm:flex-1"
+                    onClick={clearCart}
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-gray-900">
-                        {option ? `${item.name} — ${option.name}` : item.name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {formatPrice(
-                          (option?.price ?? item.price) * qty,
-                          profile.currency,
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        aria-label="Decrease quantity"
-                        onClick={() => setQuantity(key, qty - 1)}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="min-w-8 text-center font-medium">
-                        {qty}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        aria-label="Increase quantity"
-                        onClick={() => setQuantity(key, qty + 1)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="flex items-center justify-between border-t pt-3 text-base font-semibold">
-                <span>Total</span>
-                <span>{formatPrice(totalPrice, profile.currency)}</span>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  variant="outline"
-                  className="gap-2 sm:flex-1"
-                  onClick={clearCart}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Clear cart
-                </Button>
-                <Button
-                  className="gap-2 sm:flex-1"
-                  onClick={orderOnWhatsApp}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Order on WhatsApp
-                </Button>
-              </div>
+                    <Trash2 className="h-4 w-4" />
+                    Clear cart
+                  </Button>
+                  <Button className="gap-2 sm:flex-1" onClick={orderOnWhatsApp}>
+                    <MessageCircle className="h-4 w-4" />
+                    Order on WhatsApp
+                  </Button>
+                </div>
+              </DialogFooter>
             </>
           ) : (
             <p className="py-6 text-center text-sm text-gray-500">

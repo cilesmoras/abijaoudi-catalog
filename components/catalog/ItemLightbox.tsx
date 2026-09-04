@@ -75,7 +75,7 @@ export function ItemLightbox({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogTitle className="pr-8">{item.name}</DialogTitle>
 
         <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-50">
