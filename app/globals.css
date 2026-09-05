@@ -30,9 +30,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* WhatsApp brand green (#25D366) — a fixed brand colour, so it is
+     deliberately not themed alongside the palette above. */
+  --whatsapp: #25d366;
 }
 
 @theme inline {
+  --color-whatsapp: var(--whatsapp);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

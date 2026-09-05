@@ -315,41 +315,41 @@ export function PublicCatalog({
               <DialogBody>
                 <ul className="divide-y">
                   {cartEntries.map(({ key, item, option, qty }) => (
-                    <li
-                      key={key}
-                      className="flex items-center justify-between gap-3 py-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-gray-900">
-                          {option ? `${item.name} — ${option.name}` : item.name}
-                        </p>
+                    <li key={key} className="py-3">
+                      {/* The name gets the dialog's full width on its own line
+                          and wraps freely, so nothing is ever truncated. Price
+                          and quantity controls share the line below it. */}
+                      <p className="font-medium text-gray-900">
+                        {option ? `${item.name} — ${option.name}` : item.name}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
                         <p className="text-sm text-gray-500">
                           {formatPrice(
                             (option?.price ?? item.price) * qty,
                             profile.currency,
                           )}
                         </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label="Decrease quantity"
-                          onClick={() => setQuantity(key, qty - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="min-w-8 text-center font-medium">
-                          {qty}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label="Increase quantity"
-                          onClick={() => setQuantity(key, qty + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Decrease quantity"
+                            onClick={() => setQuantity(key, qty - 1)}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <span className="min-w-8 text-center font-medium">
+                            {qty}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Increase quantity"
+                            onClick={() => setQuantity(key, qty + 1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -371,7 +371,10 @@ export function PublicCatalog({
                     <Trash2 className="h-4 w-4" />
                     Clear cart
                   </Button>
-                  <Button className="gap-2 sm:flex-1" onClick={orderOnWhatsApp}>
+                  <Button
+                    className="gap-2 bg-whatsapp text-white hover:bg-whatsapp/90 sm:flex-1"
+                    onClick={orderOnWhatsApp}
+                  >
                     <MessageCircle className="h-4 w-4" />
                     Order on WhatsApp
                   </Button>
