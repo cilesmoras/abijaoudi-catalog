@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OAuthButton } from "@/components/auth/OAuthButton";
 import { GoogleIcon, FacebookIcon } from "@/components/auth/provider-icons";
+import { emailAuthErrorMessage } from "@/lib/auth-errors";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 import { createClient } from "@/utils/supabase/client";
 
 export default function SignupPage() {
@@ -20,6 +22,10 @@ export default function SignupPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -34,7 +40,7 @@ export default function SignupPage() {
 
     if (signUpError) {
       setSubmitting(false);
-      setError(signUpError.message);
+      setError(emailAuthErrorMessage(signUpError));
       return;
     }
 
@@ -115,9 +121,12 @@ export default function SignupPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="new-password"
-              minLength={6}
+              minLength={MIN_PASSWORD_LENGTH}
               required
             />
+            <p className="text-xs text-gray-500">
+              At least {MIN_PASSWORD_LENGTH} characters.
+            </p>
           </div>
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}

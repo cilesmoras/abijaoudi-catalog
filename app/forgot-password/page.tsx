@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { emailAuthErrorMessage } from "@/lib/auth-errors";
 import { createClient } from "@/utils/supabase/client";
 
 export default function ForgotPasswordPage() {
@@ -26,7 +27,7 @@ export default function ForgotPasswordPage() {
 
     setSubmitting(false);
     if (resetError) {
-      setError(resetError.message);
+      setError(emailAuthErrorMessage(resetError));
       return;
     }
     setSent(true);
