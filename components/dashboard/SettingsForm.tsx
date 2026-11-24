@@ -1,12 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { ProfileForm } from "@/components/profile/ProfileForm";
+import { Button } from "@/components/ui/button";
 import { updateProfile, type ProfileInput } from "@/lib/api-client";
 import type { Profile } from "@/lib/types";
 
-export function SettingsForm({ profile }: { profile: Profile }) {
+export function SettingsForm({
+  profile,
+  hasPassword,
+}: {
+  profile: Profile;
+  hasPassword: boolean;
+}) {
   const router = useRouter();
 
   async function handleSubmit(input: ProfileInput) {
@@ -17,7 +26,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
 
   return (
     <>
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             Catalog settings
@@ -26,6 +35,12 @@ export function SettingsForm({ profile }: { profile: Profile }) {
             Edit your handle, catalog name, and contact details.
           </p>
         </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/dashboard/settings/password">
+            <KeyRound />
+            {hasPassword ? "Change password" : "Set a password"}
+          </Link>
+        </Button>
       </div>
 
       <ProfileForm

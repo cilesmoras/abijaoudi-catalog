@@ -4,7 +4,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createClient } from "@/utils/supabase/server";
 import { db } from "@/lib/db";
 import { profiles } from "@/lib/db/schema";
@@ -68,6 +68,21 @@ export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
 
   return row ? mapProfile(row) : null;
 });
+
+/**
+ * Whether the user has an email/password credential. OAuth-only accounts
+ * (Google/Facebook) have none. Read from auth.users because the Supabase user
+ * object doesn't expose it reliably (setting a password on an OAuth account
+ * doesn't add an "email" provider). Our server DB role can read the auth schema.
+ */
+export async function userHasPassword(userId: string): Promise<boolean> {
+  const rows = await db.execute<{ has_password: boolean }>(sql`
+    select coalesce(encrypted_password, '') <> '' as has_password
+    from auth.users
+    where id = ${userId}
+  `);
+  return rows[0]?.has_password ?? false;
+}
 
 /** Returns the current user or redirects to /login. */
 export async function requireUser(): Promise<User> {

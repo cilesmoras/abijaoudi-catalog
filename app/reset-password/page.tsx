@@ -5,16 +5,23 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MIN_PASSWORD_LENGTH, validateNewPassword } from "@/lib/password";
 import { createClient } from "@/utils/supabase/client";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const invalid = validateNewPassword(password, confirm);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -50,7 +57,23 @@ export default function ResetPasswordPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="new-password"
-              minLength={6}
+              minLength={MIN_PASSWORD_LENGTH}
+              required
+            />
+            <p className="text-xs text-gray-500">
+              At least {MIN_PASSWORD_LENGTH} characters.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirm_password">Confirm new password</Label>
+            <Input
+              id="confirm_password"
+              type="password"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              autoComplete="new-password"
+              minLength={MIN_PASSWORD_LENGTH}
               required
             />
           </div>
