@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/dal";
-import { db } from "@/lib/db";
+import { withRLS } from "@/lib/db/rls";
 import { itemImages, items } from "@/lib/db/schema";
 import { deleteItemImages } from "@/lib/storage";
 import { syncItemImages } from "@/lib/item-images";
@@ -36,50 +36,66 @@ export async function createItemAction(
 
   // With options, choice prices are the pricing and items.price becomes the
   // denormalized min; without them the single price is required as before.
-  const optionsResult = validateItemOptions(values.options_label, values.options);
+  const optionsResult = validateItemOptions(
+    values.options_label,
+    values.options,
+  );
   if (!optionsResult.ok) return { error: optionsResult.error };
   if (optionsResult.minPrice === null && !Number.isFinite(values.price)) {
     return { error: "Name and price are required" };
   }
 
-  if (
-    values.category_id &&
-    !(await categoryBelongsToOwner(profile.id, values.category_id))
-  ) {
-    return { error: "Invalid category" };
-  }
+  const name = values.name.trim();
+  const result = await withRLS(
+    profile.id,
+    async (tx): Promise<ActionResult<Item>> => {
+      if (
+        values.category_id &&
+        !(await categoryBelongsToOwner(profile.id, values.category_id, tx))
+      ) {
+        return { error: "Invalid category" };
+      }
 
-  // Free plan caps the number of items; Pro is unlimited.
-  const itemCount = await countItemsForOwner(profile.id);
-  if (!canCreateItem(profile.plan, itemCount)) {
-    return {
-      error: `You've reached the Free plan limit of ${FREE_ITEM_LIMIT} items. Upgrade to Pro for unlimited items.`,
-    };
-  }
+      // Free plan caps the number of items; Pro is unlimited.
+      const itemCount = await countItemsForOwner(profile.id, tx);
+      if (!canCreateItem(profile.plan, itemCount)) {
+        return {
+          error: `You've reached the Free plan limit of ${FREE_ITEM_LIMIT} items. Upgrade to Pro for unlimited items.`,
+        };
+      }
 
-  const [created] = await db
-    .insert(items)
-    .values({
-      ownerId: profile.id,
-      name: values.name.trim(),
-      description: values.description,
-      price: optionsResult.minPrice ?? Number(values.price),
-      unit: values.unit || null,
-      optionsLabel: optionsResult.label,
-      categoryId: values.category_id || null,
-      imageUrl: values.image_url || null,
-      thumbnailUrl: values.thumbnail_url || null,
-    })
-    .returning({ id: items.id });
+      const [created] = await tx
+        .insert(items)
+        .values({
+          ownerId: profile.id,
+          name,
+          description: values.description,
+          price: optionsResult.minPrice ?? Number(values.price),
+          unit: values.unit || null,
+          optionsLabel: optionsResult.label,
+          categoryId: values.category_id || null,
+          imageUrl: values.image_url || null,
+          thumbnailUrl: values.thumbnail_url || null,
+        })
+        .returning({ id: items.id });
 
-  await syncItemImages(profile.id, created.id, profile.plan, values.images);
-  await syncItemOptions(profile.id, created.id, optionsResult.options);
+      await syncItemImages(
+        profile.id,
+        created.id,
+        profile.plan,
+        values.images,
+        tx,
+      );
+      await syncItemOptions(profile.id, created.id, optionsResult.options, tx);
 
-  const item = await getItemForOwner(profile.id, created.id);
-  if (!item) return { error: "Failed to load the created item" };
+      const item = await getItemForOwner(profile.id, created.id, tx);
+      if (!item) return { error: "Failed to load the created item" };
+      return { data: item };
+    },
+  );
 
-  revalidatePath(ITEMS_PATH);
-  return { data: item };
+  if ("data" in result) revalidatePath(ITEMS_PATH);
+  return result;
 }
 
 /**
@@ -94,48 +110,63 @@ export async function updateItemAction(
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Unauthorized" };
 
-  const optionsResult = validateItemOptions(values.options_label, values.options);
+  const optionsResult = validateItemOptions(
+    values.options_label,
+    values.options,
+  );
   if (!optionsResult.ok) return { error: optionsResult.error };
   if (optionsResult.minPrice === null && !Number.isFinite(values.price)) {
     return { error: "A price is required" };
   }
 
-  if (
-    values.category_id &&
-    !(await categoryBelongsToOwner(profile.id, values.category_id))
-  ) {
-    return { error: "Invalid category" };
-  }
+  const result = await withRLS(profile.id, async (tx) => {
+    if (
+      values.category_id &&
+      !(await categoryBelongsToOwner(profile.id, values.category_id, tx))
+    ) {
+      return { error: "Invalid category" } as const;
+    }
 
-  const [oldItem] = await db
-    .select({ imageUrl: items.imageUrl, thumbnailUrl: items.thumbnailUrl })
-    .from(items)
-    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+    const [oldItem] = await tx
+      .select({ imageUrl: items.imageUrl, thumbnailUrl: items.thumbnailUrl })
+      .from(items)
+      .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
 
-  if (!oldItem) return { error: "Item not found" };
+    if (!oldItem) return { error: "Item not found" } as const;
 
-  const oldGallery = await db
-    .select({ url: itemImages.url, thumbnailUrl: itemImages.thumbnailUrl })
-    .from(itemImages)
-    .where(eq(itemImages.itemId, id));
+    const oldGallery = await tx
+      .select({ url: itemImages.url, thumbnailUrl: itemImages.thumbnailUrl })
+      .from(itemImages)
+      .where(
+        and(eq(itemImages.itemId, id), eq(itemImages.ownerId, profile.id)),
+      );
 
-  await db
-    .update(items)
-    .set({
-      name: values.name,
-      description: values.description,
-      price: optionsResult.minPrice ?? Number(values.price),
-      unit: values.unit || null,
-      optionsLabel: optionsResult.label,
-      categoryId: values.category_id || null,
-      imageUrl: values.image_url || null,
-      thumbnailUrl: values.thumbnail_url || null,
-    })
-    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+    await tx
+      .update(items)
+      .set({
+        name: values.name,
+        description: values.description,
+        price: optionsResult.minPrice ?? Number(values.price),
+        unit: values.unit || null,
+        optionsLabel: optionsResult.label,
+        categoryId: values.category_id || null,
+        imageUrl: values.image_url || null,
+        thumbnailUrl: values.thumbnail_url || null,
+      })
+      .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
 
-  await syncItemImages(profile.id, id, profile.plan, values.images);
-  await syncItemOptions(profile.id, id, optionsResult.options);
+    await syncItemImages(profile.id, id, profile.plan, values.images, tx);
+    await syncItemOptions(profile.id, id, optionsResult.options, tx);
 
+    const item = await getItemForOwner(profile.id, id, tx);
+    if (!item) return { error: "Item not found" } as const;
+    return { item, oldItem, oldGallery };
+  });
+
+  if (result.error) return { error: result.error };
+  const { item, oldItem, oldGallery } = result;
+
+  // Storage cleanup runs only after the DB changes committed.
   const oldUrls = [
     oldItem.imageUrl,
     oldItem.thumbnailUrl,
@@ -158,9 +189,6 @@ export async function updateItemAction(
   );
   await deleteItemImages(...removed);
 
-  const item = await getItemForOwner(profile.id, id);
-  if (!item) return { error: "Item not found" };
-
   revalidatePath(ITEMS_PATH);
   return { data: item };
 }
@@ -175,21 +203,29 @@ export async function deleteItemAction(
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Unauthorized" };
 
-  const [item] = await db
-    .select({ imageUrl: items.imageUrl, thumbnailUrl: items.thumbnailUrl })
-    .from(items)
-    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+  const deleted = await withRLS(profile.id, async (tx) => {
+    const [item] = await tx
+      .select({ imageUrl: items.imageUrl, thumbnailUrl: items.thumbnailUrl })
+      .from(items)
+      .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+    if (!item) return null;
 
-  if (!item) return { error: "Item not found" };
+    const galleryRows = await tx
+      .select({ url: itemImages.url, thumbnailUrl: itemImages.thumbnailUrl })
+      .from(itemImages)
+      .where(
+        and(eq(itemImages.itemId, id), eq(itemImages.ownerId, profile.id)),
+      );
 
-  const galleryRows = await db
-    .select({ url: itemImages.url, thumbnailUrl: itemImages.thumbnailUrl })
-    .from(itemImages)
-    .where(eq(itemImages.itemId, id));
+    await tx
+      .delete(items)
+      .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+    return { item, galleryRows };
+  });
 
-  await db
-    .delete(items)
-    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)));
+  if (!deleted) return { error: "Item not found" };
+  const { item, galleryRows } = deleted;
+
   await deleteItemImages(
     item.imageUrl,
     item.thumbnailUrl,
@@ -208,15 +244,16 @@ export async function setItemHiddenAction(
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Unauthorized" };
 
-  const [updated] = await db
-    .update(items)
-    .set({ hidden })
-    .where(and(eq(items.id, id), eq(items.ownerId, profile.id)))
-    .returning({ id: items.id });
+  const item = await withRLS(profile.id, async (tx) => {
+    const [updated] = await tx
+      .update(items)
+      .set({ hidden })
+      .where(and(eq(items.id, id), eq(items.ownerId, profile.id)))
+      .returning({ id: items.id });
+    if (!updated) return null;
+    return getItemForOwner(profile.id, id, tx);
+  });
 
-  if (!updated) return { error: "Item not found" };
-
-  const item = await getItemForOwner(profile.id, id);
   if (!item) return { error: "Item not found" };
 
   revalidatePath(ITEMS_PATH);

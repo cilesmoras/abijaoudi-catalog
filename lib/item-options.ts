@@ -1,7 +1,8 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import type { DbExecutor } from "@/lib/db/rls";
 import { itemOptions } from "@/lib/db/schema";
 import { MAX_OPTIONS_PER_ITEM, MIN_OPTIONS_PER_ITEM } from "@/lib/options";
 import type { ItemOptionValue } from "@/lib/types";
@@ -76,12 +77,15 @@ export async function syncItemOptions(
   ownerId: string,
   itemId: string,
   options: ItemOptionValue[],
+  exec: DbExecutor = db,
 ): Promise<void> {
-  await db.delete(itemOptions).where(eq(itemOptions.itemId, itemId));
+  await exec
+    .delete(itemOptions)
+    .where(and(eq(itemOptions.itemId, itemId), eq(itemOptions.ownerId, ownerId)));
 
   if (options.length === 0) return;
 
-  await db.insert(itemOptions).values(
+  await exec.insert(itemOptions).values(
     options.map((option, index) => ({
       ownerId,
       itemId,

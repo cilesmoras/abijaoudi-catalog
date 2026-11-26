@@ -123,10 +123,13 @@ export function mapProfileRow(row: typeof profiles.$inferSelect): Profile {
 }
 
 /** Loads gallery photos for the given items and attaches them, sorted. */
-async function attachImages(rows: Item[]): Promise<Item[]> {
+async function attachImages(
+  rows: Item[],
+  exec: DbExecutor = db,
+): Promise<Item[]> {
   if (rows.length === 0) return rows;
   const ids = rows.map((row) => row.id);
-  const imageRows = await db
+  const imageRows = await exec
     .select({
       id: itemImages.id,
       item_id: itemImages.itemId,
@@ -154,10 +157,13 @@ async function attachImages(rows: Item[]): Promise<Item[]> {
 }
 
 /** Loads option choices for the given items and attaches them, sorted. */
-async function attachOptions(rows: Item[]): Promise<Item[]> {
+async function attachOptions(
+  rows: Item[],
+  exec: DbExecutor = db,
+): Promise<Item[]> {
   if (rows.length === 0) return rows;
   const ids = rows.map((row) => row.id);
-  const optionRows = await db
+  const optionRows = await exec
     .select({
       id: itemOptions.id,
       item_id: itemOptions.itemId,
@@ -184,19 +190,25 @@ async function attachOptions(rows: Item[]): Promise<Item[]> {
   return rows.map((row) => ({ ...row, options: byItem.get(row.id) ?? [] }));
 }
 
-export async function getItemsForOwner(ownerId: string): Promise<Item[]> {
-  const rows = await db
+export async function getItemsForOwner(
+  ownerId: string,
+  exec: DbExecutor = db,
+): Promise<Item[]> {
+  const rows = await exec
     .select(itemSelection)
     .from(items)
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(eq(items.ownerId, ownerId))
     .orderBy(asc(items.name));
-  return attachOptions(await attachImages(rows.map(mapItemRow)));
+  return attachOptions(await attachImages(rows.map(mapItemRow), exec), exec);
 }
 
 /** Total item count for an owner — used to enforce the Free plan item limit. */
-export async function countItemsForOwner(ownerId: string): Promise<number> {
-  const [row] = await db
+export async function countItemsForOwner(
+  ownerId: string,
+  exec: DbExecutor = db,
+): Promise<number> {
+  const [row] = await exec
     .select({ value: count() })
     .from(items)
     .where(eq(items.ownerId, ownerId));
@@ -204,28 +216,33 @@ export async function countItemsForOwner(ownerId: string): Promise<number> {
 }
 
 /** Visible (non-hidden) items only — used for the public catalog. */
-export async function getVisibleItemsForOwner(ownerId: string): Promise<Item[]> {
-  const rows = await db
+export async function getVisibleItemsForOwner(
+  ownerId: string,
+  exec: DbExecutor = db,
+): Promise<Item[]> {
+  const rows = await exec
     .select(itemSelection)
     .from(items)
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(and(eq(items.ownerId, ownerId), eq(items.hidden, false)))
     .orderBy(asc(items.name));
-  return attachOptions(await attachImages(rows.map(mapItemRow)));
+  return attachOptions(await attachImages(rows.map(mapItemRow), exec), exec);
 }
 
 export async function getItemForOwner(
   ownerId: string,
   id: string,
+  exec: DbExecutor = db,
 ): Promise<Item | null> {
-  const [row] = await db
+  const [row] = await exec
     .select(itemSelection)
     .from(items)
     .leftJoin(categories, eq(items.categoryId, categories.id))
     .where(and(eq(items.id, id), eq(items.ownerId, ownerId)));
   if (!row) return null;
   const [withImages] = await attachOptions(
-    await attachImages([mapItemRow(row)]),
+    await attachImages([mapItemRow(row)], exec),
+    exec,
   );
   return withImages;
 }

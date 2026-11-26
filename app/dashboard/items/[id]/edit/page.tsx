@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/dal";
+import { withRLS } from "@/lib/db/rls";
 import { getCategoriesForOwner, getItemForOwner } from "@/lib/queries";
 import { EditItemForm } from "@/components/dashboard/EditItemForm";
 
@@ -11,8 +12,8 @@ export default async function EditItemPage({
   const profile = await requireProfile();
   const { id } = await params;
   const [item, categories] = await Promise.all([
-    getItemForOwner(profile.id, id),
-    getCategoriesForOwner(profile.id),
+    withRLS(profile.id, (tx) => getItemForOwner(profile.id, id, tx)),
+    withRLS(profile.id, (tx) => getCategoriesForOwner(profile.id, tx)),
   ]);
 
   if (!item) notFound();

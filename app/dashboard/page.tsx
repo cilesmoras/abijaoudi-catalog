@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/dal";
 import { FREE_ITEM_LIMIT, isPro, proDaysRemaining } from "@/lib/plans";
+import { withRLS } from "@/lib/db/rls";
 import { countItemsForOwner } from "@/lib/queries";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +13,9 @@ export const metadata = { title: "Dashboard | Cataloo" };
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
-  const itemCount = await countItemsForOwner(profile.id);
+  const itemCount = await withRLS(profile.id, (tx) =>
+    countItemsForOwner(profile.id, tx),
+  );
   const pro = isPro(profile.plan);
   const atLimit = !pro && itemCount >= FREE_ITEM_LIMIT;
   const upgradeRequested = Boolean(profile.upgrade_requested_at);

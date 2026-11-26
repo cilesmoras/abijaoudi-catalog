@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ItemsManager } from "@/components/dashboard/ItemsManager";
 import { ItemsSkeleton } from "@/components/dashboard/ItemsSkeleton";
 import { requireProfile } from "@/lib/dal";
+import { withRLS } from "@/lib/db/rls";
 import { getCategoriesForOwner, getItemsForOwner } from "@/lib/queries";
 import type { Profile } from "@/lib/types";
 
@@ -21,8 +22,8 @@ export default async function DashboardItemsPage() {
 
 async function ItemsData({ profile }: { profile: Profile }) {
   const [items, categories] = await Promise.all([
-    getItemsForOwner(profile.id),
-    getCategoriesForOwner(profile.id),
+    withRLS(profile.id, (tx) => getItemsForOwner(profile.id, tx)),
+    withRLS(profile.id, (tx) => getCategoriesForOwner(profile.id, tx)),
   ]);
 
   return (

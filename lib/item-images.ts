@@ -1,7 +1,8 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import type { DbExecutor } from "@/lib/db/rls";
 import { itemImages } from "@/lib/db/schema";
 import { isPro, photoLimitFor } from "@/lib/plans";
 import type { Plan } from "@/lib/types";
@@ -22,8 +23,11 @@ export async function syncItemImages(
   itemId: string,
   plan: Plan,
   images: unknown,
+  exec: DbExecutor = db,
 ): Promise<void> {
-  await db.delete(itemImages).where(eq(itemImages.itemId, itemId));
+  await exec
+    .delete(itemImages)
+    .where(and(eq(itemImages.itemId, itemId), eq(itemImages.ownerId, ownerId)));
 
   if (!isPro(plan) || !Array.isArray(images) || images.length === 0) return;
 
@@ -42,5 +46,5 @@ export async function syncItemImages(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
-  if (rows.length > 0) await db.insert(itemImages).values(rows);
+  if (rows.length > 0) await exec.insert(itemImages).values(rows);
 }
