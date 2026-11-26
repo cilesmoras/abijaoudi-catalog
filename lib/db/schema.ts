@@ -10,8 +10,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 // `profiles.id` equals the Supabase `auth.users.id`. Drizzle's schemaFilter is
-// ["public"], so the FK to auth.users is added in the raw migration script
-// (scripts/apply-migration.mjs), not here.
+// ["public"], so the FK to auth.users lives in raw SQL (it already exists in the
+// database; the original multi-tenant setup script was removed), not here.
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
   handle: text("handle").notNull().unique(),

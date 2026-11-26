@@ -1,5 +1,5 @@
 // Applies one SQL migration file in a single transaction.
-// Usage: node scripts/run-sql-migration.mjs drizzle/0005_rls_owner_policies.sql
+// Usage: npm run db:migrate -- drizzle/0005_rls_owner_policies.sql
 import { readFileSync } from "node:fs";
 import { config } from "dotenv";
 import postgres from "postgres";

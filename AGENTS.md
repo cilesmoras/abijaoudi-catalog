@@ -10,7 +10,7 @@ All table access goes through Drizzle as the `postgres` role (bypasses RLS). The
 
 - Every new table migration must include `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`. Never `GRANT` to `anon`/`authenticated`.
 - Never query tables with supabase-js from the browser — it will fail by design. Enforce ownership in server code (`lib/dal.ts`, `owner_id` filters).
-- Do not use `scripts/apply-migration.mjs` — it drops all tables. Apply SQL with `node scripts/run-sql-migration.mjs <file>`.
+- Apply SQL migrations with `npm run db:migrate -- drizzle/<file>.sql` (`scripts/run-sql-migration.mjs`, one transaction).
 - Per-owner policies (`drizzle/0005_rls_owner_policies.sql`) target a private NOLOGIN role `app_owner`, never `authenticated` (granting `authenticated` would reopen PostgREST to logged-in owners and skip app rules like the Free item cap). Owner id comes from `app_private.uid()` (reads `request.jwt.claims.sub`; Supabase won't let us grant on `auth`).
 - Owner/dashboard queries run through `withRLS` from `lib/db/rls.ts` (transaction + `SET LOCAL ROLE app_owner` + claims from the `getUser()`-validated user). Public catalog reads, `/api/track`, admin, onboarding, handle uniqueness, Pro-only profile fields (handle, logo, socials), plan/upgrade fields and `auth.users` reads stay on the postgres connection.
 - Shared query helpers take an optional `exec: DbExecutor = db`; dashboard callers pass the RLS `tx`. Don't `Promise.all` inside one `withRLS` — use one call per parallel read. Do storage cleanup / `revalidatePath` after the transaction returns.
