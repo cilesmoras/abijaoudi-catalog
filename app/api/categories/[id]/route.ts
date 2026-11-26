@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { getCurrentProfile } from "@/lib/dal";
-import { db } from "@/lib/db";
+import { withRLS } from "@/lib/db/rls";
 import { categories } from "@/lib/db/schema";
 
 export const runtime = "nodejs";
@@ -15,10 +15,12 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const [deleted] = await db
-    .delete(categories)
-    .where(and(eq(categories.id, id), eq(categories.ownerId, profile.id)))
-    .returning({ id: categories.id });
+  const [deleted] = await withRLS(profile.id, (tx) =>
+    tx
+      .delete(categories)
+      .where(and(eq(categories.id, id), eq(categories.ownerId, profile.id)))
+      .returning({ id: categories.id }),
+  );
 
   if (!deleted) {
     return Response.json({ error: "Category not found" }, { status: 404 });

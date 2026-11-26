@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { CategoriesManager } from "@/components/dashboard/CategoriesManager";
 import { CategoriesSkeleton } from "@/components/dashboard/CategoriesSkeleton";
 import { requireProfile } from "@/lib/dal";
+import { withRLS } from "@/lib/db/rls";
 import { getCategoriesForOwner } from "@/lib/queries";
 
 export const metadata = { title: "Categories | Cataloo" };
@@ -28,6 +29,8 @@ export default async function DashboardCategoriesPage() {
 }
 
 async function CategoriesData({ ownerId }: { ownerId: string }) {
-  const categories = await getCategoriesForOwner(ownerId);
+  const categories = await withRLS(ownerId, (tx) =>
+    getCategoriesForOwner(ownerId, tx),
+  );
   return <CategoriesManager initialCategories={categories} />;
 }

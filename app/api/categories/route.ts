@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getCurrentProfile } from "@/lib/dal";
-import { db } from "@/lib/db";
+import { withRLS } from "@/lib/db/rls";
 import { categories } from "@/lib/db/schema";
 import { getCategoriesForOwner, mapCategoryRow, slugify } from "@/lib/queries";
 
@@ -12,7 +12,9 @@ export async function GET() {
   if (!profile) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return Response.json(await getCategoriesForOwner(profile.id));
+  return Response.json(
+    await withRLS(profile.id, (tx) => getCategoriesForOwner(profile.id, tx)),
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -29,24 +31,28 @@ export async function POST(request: NextRequest) {
 
   const slug = slugify(name);
 
-  // Slug uniqueness is per-owner.
-  const [existing] = await db
-    .select({ id: categories.id })
-    .from(categories)
-    .where(and(eq(categories.ownerId, profile.id), eq(categories.slug, slug)))
-    .limit(1);
+  const created = await withRLS(profile.id, async (tx) => {
+    // Slug uniqueness is per-owner.
+    const [existing] = await tx
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.ownerId, profile.id), eq(categories.slug, slug)))
+      .limit(1);
+    if (existing) return null;
 
-  if (existing) {
+    const [row] = await tx
+      .insert(categories)
+      .values({ ownerId: profile.id, name, slug })
+      .returning();
+    return row;
+  });
+
+  if (!created) {
     return Response.json(
       { error: "A category with that name already exists" },
       { status: 409 },
     );
   }
-
-  const [created] = await db
-    .insert(categories)
-    .values({ ownerId: profile.id, name, slug })
-    .returning();
 
   return Response.json(mapCategoryRow(created), { status: 201 });
 }

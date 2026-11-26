@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import type { DbExecutor } from "@/lib/db/rls";
 import { categories, itemImages, itemOptions, items, profiles } from "@/lib/db/schema";
 import type {
   Category,
@@ -231,8 +232,9 @@ export async function getItemForOwner(
 
 export async function getCategoriesForOwner(
   ownerId: string,
+  exec: DbExecutor = db,
 ): Promise<Category[]> {
-  const rows = await db
+  const rows = await exec
     .select()
     .from(categories)
     .where(eq(categories.ownerId, ownerId))
@@ -244,8 +246,9 @@ export async function getCategoriesForOwner(
 export async function categoryBelongsToOwner(
   ownerId: string,
   categoryId: string,
+  exec: DbExecutor = db,
 ): Promise<boolean> {
-  const [row] = await db
+  const [row] = await exec
     .select({ id: categories.id })
     .from(categories)
     .where(and(eq(categories.id, categoryId), eq(categories.ownerId, ownerId)))

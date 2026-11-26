@@ -3,7 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/dal";
-import { db } from "@/lib/db";
+import { withRLS } from "@/lib/db/rls";
 import { categories } from "@/lib/db/schema";
 import { mapCategoryRow, slugify } from "@/lib/queries";
 import type { Category } from "@/lib/types";
@@ -27,21 +27,25 @@ export async function createCategoryAction(
 
   const slug = slugify(trimmed);
 
-  // Slug uniqueness is per-owner.
-  const [existing] = await db
-    .select({ id: categories.id })
-    .from(categories)
-    .where(and(eq(categories.ownerId, profile.id), eq(categories.slug, slug)))
-    .limit(1);
+  const created = await withRLS(profile.id, async (tx) => {
+    // Slug uniqueness is per-owner.
+    const [existing] = await tx
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.ownerId, profile.id), eq(categories.slug, slug)))
+      .limit(1);
+    if (existing) return null;
 
-  if (existing) {
+    const [row] = await tx
+      .insert(categories)
+      .values({ ownerId: profile.id, name: trimmed, slug })
+      .returning();
+    return row;
+  });
+
+  if (!created) {
     return { error: "A category with that name already exists" };
   }
-
-  const [created] = await db
-    .insert(categories)
-    .values({ ownerId: profile.id, name: trimmed, slug })
-    .returning();
 
   revalidatePath("/dashboard/categories");
   return { data: mapCategoryRow(created) };
@@ -57,10 +61,12 @@ export async function deleteCategoryAction(
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Unauthorized" };
 
-  const [deleted] = await db
-    .delete(categories)
-    .where(and(eq(categories.id, id), eq(categories.ownerId, profile.id)))
-    .returning({ id: categories.id });
+  const [deleted] = await withRLS(profile.id, (tx) =>
+    tx
+      .delete(categories)
+      .where(and(eq(categories.id, id), eq(categories.ownerId, profile.id)))
+      .returning({ id: categories.id }),
+  );
 
   if (!deleted) return { error: "Category not found" };
 
