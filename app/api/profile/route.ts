@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { and, eq, ne } from "drizzle-orm";
 import { getCurrentProfile, getCurrentUser } from "@/lib/dal";
 import { db } from "@/lib/db";
+import { asOwner } from "@/lib/db/rls";
 import { profiles } from "@/lib/db/schema";
 import {
   generateRandomHandle,
@@ -203,25 +204,52 @@ export async function PUT(request: NextRequest) {
     : profile.instagram_url;
   const tiktokUrl = pro ? cleanContact(body.tiktok_url) : profile.tiktok_url;
 
-  const [updated] = await db
-    .update(profiles)
-    .set({
-      handle,
-      catalogName,
-      logoUrl,
-      facebookUrl,
-      instagramUrl,
-      tiktokUrl,
-      phone: cleanContact(body.phone),
-      country: cleanCountry(body.country),
-      contactEmail: cleanContact(body.contact_email),
-      address: cleanContact(body.address),
-      currency: cleanCurrency(body.currency),
-      ...fulfillmentFields(body),
-      updatedAt: new Date(),
-    })
-    .where(eq(profiles.id, profile.id))
-    .returning();
+  // Pro-only fields (handle, logo, socials) are written as postgres: the
+  // app_owner role has no UPDATE grant on them, so only this server path, after
+  // the plan checks above, can change them. The rest is written under RLS. Both
+  // run in one transaction so a save never half-applies.
+  let updated: typeof profiles.$inferSelect | undefined;
+  try {
+    updated = await db.transaction(async (tx) => {
+      if (pro || canUseCustomHandle(profile.plan)) {
+        await tx
+          .update(profiles)
+          .set({ handle, logoUrl, facebookUrl, instagramUrl, tiktokUrl })
+          .where(eq(profiles.id, profile.id));
+      }
+
+      await asOwner(tx, profile.id);
+      const [row] = await tx
+        .update(profiles)
+        .set({
+          catalogName,
+          phone: cleanContact(body.phone),
+          country: cleanCountry(body.country),
+          contactEmail: cleanContact(body.contact_email),
+          address: cleanContact(body.address),
+          currency: cleanCurrency(body.currency),
+          ...fulfillmentFields(body),
+          updatedAt: new Date(),
+        })
+        .where(eq(profiles.id, profile.id))
+        .returning();
+      return row;
+    });
+  } catch (err) {
+    // Lost a race for the handle between handleTaken() and the write.
+    // Drizzle wraps the driver error in `cause`; check both shapes.
+    const e = err as { code?: string; cause?: { code?: string } };
+    if ((e?.cause?.code ?? e?.code) === "23505") {
+      return Response.json(
+        { error: "That handle is already taken" },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
+  if (!updated) {
+    return Response.json({ error: "Profile not found" }, { status: 404 });
+  }
 
   // Clean up the old logo file once it's no longer referenced (removed or
   // replaced). Best-effort — never fails the save.

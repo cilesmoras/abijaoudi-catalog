@@ -29,18 +29,27 @@ export async function withRLS<T>(
   ownerId: string,
   fn: (tx: DbTx) => Promise<T>,
 ): Promise<T> {
-  if (!UUID_RE.test(ownerId)) {
-    throw new Error("withRLS: ownerId must be a UUID");
-  }
-  const claims = JSON.stringify({ sub: ownerId, role: "authenticated" });
-
   return db.transaction(async (tx) => {
-    // One round trip: set the claims app_private.uid() reads, then drop
-    // privileges to app_owner (set_config('role') is SET LOCAL ROLE).
-    await tx.execute(sql`
-      select set_config('request.jwt.claims', ${claims}, true),
-             set_config('role', 'app_owner', true)
-    `);
+    await asOwner(tx, ownerId);
     return fn(tx);
   });
+}
+
+/**
+ * Drops an open transaction to `app_owner` for `ownerId`, for the rest of that
+ * transaction. Use it directly only when a transaction must first do a
+ * privileged write as postgres (e.g. Pro-only profile fields) and then continue
+ * under RLS, so both halves commit or roll back together. Otherwise use withRLS.
+ */
+export async function asOwner(tx: DbTx, ownerId: string): Promise<void> {
+  if (!UUID_RE.test(ownerId)) {
+    throw new Error("asOwner: ownerId must be a UUID");
+  }
+  const claims = JSON.stringify({ sub: ownerId, role: "authenticated" });
+  // One round trip: set the claims app_private.uid() reads, then drop
+  // privileges to app_owner (set_config('role') is SET LOCAL ROLE).
+  await tx.execute(sql`
+    select set_config('request.jwt.claims', ${claims}, true),
+           set_config('role', 'app_owner', true)
+  `);
 }

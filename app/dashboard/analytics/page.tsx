@@ -2,6 +2,7 @@ import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButto
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/dal";
 import { isPro } from "@/lib/plans";
+import { withRLS } from "@/lib/db/rls";
 import { getCatalogAnalytics } from "@/lib/queries";
 
 export const metadata = { title: "Analytics | Cataloo" };
@@ -36,7 +37,7 @@ export default async function AnalyticsPage() {
   }
 
   const { totalViews, totalOpens, viewsByDay, topItems } =
-    await getCatalogAnalytics(profile.id);
+    await withRLS(profile.id, (tx) => getCatalogAnalytics(profile.id, tx));
   const maxDay = Math.max(1, ...viewsByDay.map((row) => row.views));
 
   return (

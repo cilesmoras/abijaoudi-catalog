@@ -338,8 +338,9 @@ export type CatalogAnalytics = {
 /** Pro analytics for the last 30 days: views, item opens, and top items. */
 export async function getCatalogAnalytics(
   ownerId: string,
+  exec: DbExecutor = db,
 ): Promise<CatalogAnalytics> {
-  const totals = await db.execute<{ type: string; count: number }>(sql`
+  const totals = await exec.execute<{ type: string; count: number }>(sql`
     SELECT type, count(*)::int AS count
     FROM catalog_events
     WHERE owner_id = ${ownerId} AND created_at >= now() - interval '30 days'
@@ -350,7 +351,7 @@ export async function getCatalogAnalytics(
   const totalOpens =
     totals.find((row) => row.type === "item_open")?.count ?? 0;
 
-  const byDay = await db.execute<{ day: string; views: number }>(sql`
+  const byDay = await exec.execute<{ day: string; views: number }>(sql`
     SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day,
            count(*)::int AS views
     FROM catalog_events
@@ -360,7 +361,7 @@ export async function getCatalogAnalytics(
     ORDER BY 1
   `);
 
-  const top = await db.execute<{ id: string; name: string; opens: number }>(sql`
+  const top = await exec.execute<{ id: string; name: string; opens: number }>(sql`
     SELECT i.id, i.name, count(*)::int AS opens
     FROM catalog_events e
     JOIN items i ON i.id = e.item_id
