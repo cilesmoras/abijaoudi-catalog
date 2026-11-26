@@ -616,9 +616,22 @@ export default async function LandingPage() {
             />
             <span className="font-semibold text-gray-900">Cataloo</span>
           </div>
-          <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} Cataloo. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-1 sm:items-end">
+            <p className="text-sm text-gray-500">
+              © {new Date().getFullYear()} Cataloo. All rights reserved.
+            </p>
+            <p className="text-xs text-gray-400">
+              Built by{" "}
+              <a
+                href="https://www.cilesmoras.com/?utm_source=cataloo&utm_medium=footer&utm_campaign=landing"
+                target="_blank"
+                rel="noopener"
+                className="font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
+              >
+                Ian Lesmoras
+              </a>
+            </p>
+          </div>
         </div>
       </footer>
     </div>
