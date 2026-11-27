@@ -72,6 +72,12 @@ try {
     check("cannot change own plan", code === "42501", code);
     code = await attempt(tx, (s) => s`update profiles set handle = 'x' where id = ${a.id}`);
     check("cannot change own handle", code === "42501", code);
+    for (const col of ["pro_source", "paddle_customer_id", "paddle_subscription_id", "subscription_status", "current_period_end", "cancel_at_period_end"]) {
+      code = await attempt(tx, (s) => s.unsafe(`update profiles set ${col} = ${col} where id = $1`, [a.id]));
+      check(`cannot change own billing field ${col}`, code === "42501", code);
+    }
+    code = await attempt(tx, (s) => s`select 1 from paddle_webhook_events limit 1`);
+    check("cannot read paddle_webhook_events", code === "42501", code);
     code = await attempt(tx, (s) => s`update profiles set catalog_name = catalog_name where id = ${a.id}`);
     check("can update own safe profile field", code === null, code);
 

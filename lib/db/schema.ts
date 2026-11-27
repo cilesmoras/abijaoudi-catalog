@@ -22,8 +22,8 @@ export const profiles = pgTable("profiles", {
   address: text("address"),
   currency: text("currency"),
   // Subscription tier. Free is enforced (item limit, random handle, share
-  // badge, watermarked PDF); Pro unlocks them. Activated manually for now —
-  // see scripts/set-plan.mjs — until a payment provider is wired in.
+  // badge, watermarked PDF); Pro unlocks them. Written by the Paddle webhook
+  // for paid subscriptions, or manually (admin page / scripts/set-plan.mjs).
   plan: text("plan").notNull().default("free"),
   // When the current Pro term lapses. Set 30 days out on each manual activation;
   // drives an owner-facing countdown. Null for Free and for legacy Pro grants
@@ -35,6 +35,23 @@ export const profiles = pgTable("profiles", {
   // Optional note the user includes with their upgrade request. Cleared with the
   // request flag on activation.
   upgradeRequestMessage: text("upgrade_request_message"),
+  // ── Paddle billing mirror (drizzle/0006). Written only by the Paddle
+  // webhook on the postgres connection; owners can read but not update.
+  // 'paddle' | 'comp' | null. Comp = free Pro forever, never touched by webhooks.
+  proSource: text("pro_source"),
+  paddleCustomerId: text("paddle_customer_id").unique(),
+  paddleSubscriptionId: text("paddle_subscription_id").unique(),
+  // Raw Paddle status: active | trialing | past_due | paused | canceled.
+  subscriptionStatus: text("subscription_status"),
+  subscriptionPriceId: text("subscription_price_id"),
+  // 'month' | 'year'
+  billingInterval: text("billing_interval"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  // Paddle occurred_at of the last applied subscription event (ordering guard).
+  subscriptionSyncedAt: timestamp("subscription_synced_at", {
+    withTimezone: true,
+  }),
   // Pro-only: logo shown on PDF exports in place of the Cataloo branding.
   logoUrl: text("logo_url"),
   // Pro-only social links, shown on the public catalog and in PDF exports.
@@ -159,6 +176,17 @@ export const catalogEvents = pgTable("catalog_events", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+});
+
+// Idempotency log for Paddle webhooks (server-only; RLS on, no grants).
+export const paddleWebhookEvents = pgTable("paddle_webhook_events", {
+  eventId: text("event_id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
 });
 
 export const profilesRelations = relations(profiles, ({ many }) => ({

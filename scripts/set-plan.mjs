@@ -45,6 +45,7 @@ async function main() {
         UPDATE profiles
         SET plan = ${plan},
             pro_expires_at = CASE WHEN ${plan} = 'pro' THEN now() + interval '30 days' ELSE NULL END,
+            pro_source = CASE WHEN ${plan} = 'free' THEN NULL ELSE pro_source END,
             updated_at = now()
         WHERE handle = ${handle}
         RETURNING handle, plan
@@ -53,6 +54,7 @@ async function main() {
         UPDATE profiles
         SET plan = ${plan},
             pro_expires_at = CASE WHEN ${plan} = 'pro' THEN now() + interval '30 days' ELSE NULL END,
+            pro_source = CASE WHEN ${plan} = 'free' THEN NULL ELSE pro_source END,
             updated_at = now()
         WHERE id = (SELECT id FROM auth.users WHERE email = ${email})
         RETURNING handle, plan

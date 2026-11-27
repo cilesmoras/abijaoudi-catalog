@@ -71,7 +71,10 @@ Gets `cataloo.app` ready for Paddle's domain review, so the domain can be submit
    - `abijaoudi-supermarket` and `sample-store` get `pro_source = 'comp'` (free Pro forever).
    - `deuprh` stays Pro until 2026-12-19, then is asked to subscribe.
    - `vxkf3a`'s term already ended, so it goes back to Free at launch.
-3. **Change `lib/plans.ts`** so Pro is worked out from the Paddle status: `active`, `past_due` (still retrying a payment), or canceled with `current_period_end` still in the future. A `comp` profile is always Pro. `PRO_TERM_DAYS` and the manual expiry stay only as an admin fallback.
+3. **`profiles.plan` stays the one feature gate** (`isPro` unchanged). The webhook writes `plan` using `planForSubscriptionStatus()` in `lib/plans.ts`: `active`, `trialing` and `past_due` keep Pro; `canceled` and `paused` mean Free. Paddle keeps a subscription `active` until the end of a canceled period, so no date math is needed. Comp profiles are never touched. `PRO_TERM_DAYS` and the manual expiry stay only as an admin fallback.
+4. **Billing fields are not added to the shared `Profile` type**, because it's passed to public catalog pages. The dashboard reads them through a separate billing query (Phase 6).
+
+**Status (2026-11-27):** migration applied; comps backfilled; RLS test extended (owners can't write billing columns or read `paddle_webhook_events`). `vxkf3a` is still Pro until the go-live cleanup.
 
 ## Phase 3: Paddle setup in sandbox
 

@@ -14,6 +14,21 @@ export const PRO_PRICE_YEARLY = 100;
 // equivalent SQL interval literal.
 export const PRO_TERM_DAYS = 30;
 
+/** Where an owner's Pro comes from (`profiles.pro_source`). */
+export type ProSource = "paddle" | "comp";
+
+/**
+ * Plan implied by a Paddle subscription status. Paddle keeps a subscription
+ * `active` (with a scheduled change) until the end of a canceled period, and
+ * `past_due` while it retries a failed renewal — both keep Pro. It only turns
+ * `canceled` once access should end, and `paused` means no paid period.
+ */
+export function planForSubscriptionStatus(status: string): Plan {
+  return status === "active" || status === "trialing" || status === "past_due"
+    ? "pro"
+    : "free";
+}
+
 export function isPro(plan: Plan): boolean {
   return plan === "pro";
 }

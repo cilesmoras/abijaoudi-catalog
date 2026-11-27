@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
         plan === "pro"
           ? new Date(Date.now() + PRO_TERM_DAYS * 24 * 60 * 60 * 1000)
           : null,
+      // A manual downgrade also ends a comp grant. (A paid Paddle subscriber's
+      // next webhook re-asserts pro_source = 'paddle'.)
+      ...(plan === "free" ? { proSource: null } : {}),
       upgradeRequestedAt: null,
       upgradeRequestMessage: null,
       updatedAt: new Date(),
