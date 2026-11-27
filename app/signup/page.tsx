@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OAuthButton } from "@/components/auth/OAuthButton";
+import { LegalConsentNotice } from "@/components/legal/LegalConsentNotice";
 import { GoogleIcon, FacebookIcon } from "@/components/auth/provider-icons";
 import { emailAuthErrorMessage } from "@/lib/auth-errors";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
@@ -135,6 +136,8 @@ export default function SignupPage() {
             {submitting ? "Creating account…" : "Sign up"}
           </Button>
         </form>
+
+        <LegalConsentNotice />
 
         <p className="mt-6 text-center text-sm text-gray-500">
           Already have an account?{" "}

@@ -2,6 +2,7 @@ import { HeroBackground } from "@/components/landing/HeroBackground";
 import { MobileNav } from "@/components/landing/MobileNav";
 import { NAV_LINKS } from "@/components/landing/nav-links";
 import { Reveal } from "@/components/landing/Reveal";
+import { LegalFooterLinks } from "@/components/legal/LegalFooterLinks";
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
@@ -11,6 +12,7 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { getCurrentUser } from "@/lib/dal";
+import { PRO_PRICE_MONTHLY, PRO_PRICE_YEARLY } from "@/lib/plans";
 import {
   ArrowRight,
   Check,
@@ -61,7 +63,7 @@ const steps = [
 const faqs = [
   {
     q: "Is Cataloo free?",
-    a: "Yes — Cataloo is free to use, with generous limits. A Pro plan with unlimited items, multiple photos, a custom link, analytics, and more is available — contact us to upgrade.",
+    a: "Yes — Cataloo is free to use, with generous limits. Pro adds unlimited items, multiple photos, a custom link, analytics, and more for $10/month or $100/year. Cancel anytime.",
   },
   {
     q: "Do my customers need an account?",
@@ -447,15 +449,21 @@ export default async function LandingPage() {
                   Available now
                 </span>
               </div>
-              <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-                Contact for pricing
+              <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
+                ${PRO_PRICE_MONTHLY}
+                <span className="ml-1 text-sm font-medium text-gray-500">
+                  / month
+                </span>
+              </p>
+              <p className="text-xs text-gray-500">
+                or ${PRO_PRICE_YEARLY}/year — 2 months free
               </p>
               <Button
                 asChild
                 className="mt-5 w-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
               >
                 <Link href={user ? "/dashboard" : "/signup"}>
-                  Contact to upgrade
+                  {user ? "Upgrade to Pro" : "Get Pro"}
                 </Link>
               </Button>
               <ul className="mt-6 space-y-3 border-t border-blue-100 pt-5">
@@ -495,8 +503,14 @@ export default async function LandingPage() {
                   <p className="mt-2 text-sm font-semibold text-gray-900">
                     Pro
                   </p>
-                  <p className="mt-1 text-lg font-semibold tracking-tight text-gray-900">
-                    Contact for pricing
+                  <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
+                    ${PRO_PRICE_MONTHLY}
+                    <span className="ml-1 text-sm font-medium text-gray-500">
+                      / month
+                    </span>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    or ${PRO_PRICE_YEARLY}/year — 2 months free
                   </p>
                 </div>
               </div>
@@ -538,7 +552,7 @@ export default async function LandingPage() {
                     className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md shadow-blue-600/20 hover:opacity-90"
                   >
                     <Link href={user ? "/dashboard" : "/signup"}>
-                      Contact to upgrade
+                      {user ? "Upgrade to Pro" : "Get Pro"}
                     </Link>
                   </Button>
                 </div>
@@ -617,6 +631,7 @@ export default async function LandingPage() {
             <span className="font-semibold text-gray-900">Cataloo</span>
           </div>
           <div className="flex flex-col items-center gap-1 sm:items-end">
+            <LegalFooterLinks />
             <p className="text-sm text-gray-500">
               © {new Date().getFullYear()} Cataloo. All rights reserved.
             </p>
