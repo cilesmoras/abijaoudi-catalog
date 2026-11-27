@@ -3,6 +3,7 @@ import { isAdmin } from "@/lib/admin";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { SidebarTriggers } from "@/components/dashboard/SidebarTriggers";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { PaddleCheckoutProvider } from "@/components/billing/PaddleCheckoutProvider";
 
 export default async function DashboardLayout({
   children,
@@ -13,23 +14,25 @@ export default async function DashboardLayout({
   const user = await getCurrentUser();
 
   return (
-    <SidebarProvider>
-      <AppSidebar
-        handle={profile.handle}
-        plan={profile.plan}
-        email={profile.contact_email}
-        isAdmin={isAdmin(user?.email)}
-        upgradeRequested={Boolean(profile.upgrade_requested_at)}
-      />
-      <div className="flex min-h-svh flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-gray-200/70 bg-white/70 px-4 backdrop-blur-xl">
-          <SidebarTriggers />
-          <span className="text-sm font-semibold text-gray-900">
-            {profile.catalog_name}
-          </span>
-        </header>
-        {children}
-      </div>
-    </SidebarProvider>
+    <PaddleCheckoutProvider ownerId={profile.id} email={user?.email ?? null}>
+      <SidebarProvider>
+        <AppSidebar
+          handle={profile.handle}
+          plan={profile.plan}
+          email={profile.contact_email}
+          isAdmin={isAdmin(user?.email)}
+          upgradeRequested={Boolean(profile.upgrade_requested_at)}
+        />
+        <div className="flex min-h-svh flex-1 flex-col">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-gray-200/70 bg-white/70 px-4 backdrop-blur-xl">
+            <SidebarTriggers />
+            <span className="text-sm font-semibold text-gray-900">
+              {profile.catalog_name}
+            </span>
+          </header>
+          {children}
+        </div>
+      </SidebarProvider>
+    </PaddleCheckoutProvider>
   );
 }

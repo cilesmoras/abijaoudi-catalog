@@ -17,7 +17,7 @@ import type { Plan } from "@/lib/types";
 import { isPro } from "@/lib/plans";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { FeedbackDialog } from "@/components/dashboard/FeedbackDialog";
-import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
+import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import {
   Sidebar,
   SidebarContent,
@@ -156,7 +156,7 @@ export function AppSidebar({
             {pro ? "Pro plan" : "Free plan"}
           </span>
           {!pro ? (
-            <RequestUpgradeButton
+            <UpgradeButton
               alreadyRequested={upgradeRequested}
               className="w-fit px-0.5 text-xs font-medium text-blue-600 hover:underline disabled:opacity-60"
               requestedClassName="px-0.5 text-xs font-medium text-emerald-600"

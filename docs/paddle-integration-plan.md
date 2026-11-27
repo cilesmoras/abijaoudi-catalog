@@ -88,6 +88,8 @@ Gets `cataloo.app` ready for Paddle's domain review, so the domain can be submit
    - `NEXT_PUBLIC_PADDLE_PRICE_YEARLY`
 3. **Install** `@paddle/paddle-js` and `@paddle/paddle-node-sdk`.
 
+**Status (2026-11-27):** sandbox product `pro_01m8fm16879crr1kda08p56nfq`, prices monthly `pri_01m8fm1f6ayt8pmzvkvjqbh2hw` and yearly `pri_01m8fm1g20v9r74rh2cq6e66vm`. SDKs installed; env vars documented in `.env.example`.
+
 ## Phase 4: Checkout
 
 1. **Upgrade card in the dashboard.** Monthly/yearly toggle; prices shown in the visitor's local currency by Paddle (`PricePreview`).
@@ -120,6 +122,8 @@ Gets `cataloo.app` ready for Paddle's domain review, so the domain can be submit
    - "Payment failed — update your card" while Paddle is retrying a payment.
    - "Pro ends on X" after a cancel.
    - These replace the current manual expiry countdown.
+
+**Status (2026-11-27), Phases 4–6 built:** `components/billing/*` (provider, UpgradeButton with fallback to the manual request flow when Paddle env is missing, success notice, Billing card, Manage billing), `lib/paddle/{server,sync}.ts`, `app/api/paddle/webhook`, `app/dashboard/settings/billing-actions.ts`. Local signed-webhook test passed (valid → 200, duplicate skipped, bad signature → 500).
 
 ## Phase 7: Testing in sandbox (`dev` branch Vercel preview)
 

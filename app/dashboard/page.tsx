@@ -1,7 +1,9 @@
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
-import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
+import { UpgradeButton } from "@/components/billing/UpgradeButton";
+import { UpgradeSuccessNotice } from "@/components/billing/UpgradeSuccessNotice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatBillingDate, getBillingState } from "@/lib/billing";
 import { requireProfile } from "@/lib/dal";
 import { FREE_ITEM_LIMIT, isPro, proDaysRemaining } from "@/lib/plans";
 import { withRLS } from "@/lib/db/rls";
@@ -11,11 +13,19 @@ import Link from "next/link";
 
 export const metadata = { title: "Dashboard | Cataloo" };
 
-export default async function DashboardPage() {
-  const profile = await requireProfile();
-  const itemCount = await withRLS(profile.id, (tx) =>
-    countItemsForOwner(profile.id, tx),
-  );
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgraded?: string }>;
+}) {
+  const [profile, { upgraded }] = await Promise.all([
+    requireProfile(),
+    searchParams,
+  ]);
+  const [itemCount, billing] = await Promise.all([
+    withRLS(profile.id, (tx) => countItemsForOwner(profile.id, tx)),
+    getBillingState(profile.id),
+  ]);
   const pro = isPro(profile.plan);
   const atLimit = !pro && itemCount >= FREE_ITEM_LIMIT;
   const upgradeRequested = Boolean(profile.upgrade_requested_at);
@@ -23,6 +33,37 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+      {upgraded === "1" ? <UpgradeSuccessNotice isPro={pro} /> : null}
+      {pro && billing.source === "paddle" && billing.status === "past_due" ? (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          Your last payment failed. We&apos;ll retry it, but please{" "}
+          <Link
+            href="/dashboard/settings#billing"
+            className="font-medium underline"
+          >
+            update your payment method
+          </Link>{" "}
+          to keep Pro.
+        </div>
+      ) : pro &&
+        billing.source === "paddle" &&
+        billing.cancelAtPeriodEnd &&
+        billing.currentPeriodEnd ? (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Your Pro plan is canceled and ends on{" "}
+          {formatBillingDate(billing.currentPeriodEnd)}.{" "}
+          <Link
+            href="/dashboard/settings#billing"
+            className="font-medium underline"
+          >
+            Manage billing
+          </Link>{" "}
+          to keep it.
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="w-full">
           <div className="flex flex-wrap items-center gap-2">
@@ -66,7 +107,7 @@ export default async function DashboardPage() {
           </div>
           {!pro ? (
             <p className="mt-1 inline-flex flex-wrap items-center gap-1 text-sm text-gray-500">
-              <RequestUpgradeButton
+              <UpgradeButton
                 alreadyRequested={upgradeRequested}
                 className="font-medium text-blue-600 hover:underline disabled:opacity-60"
                 requestedClassName="font-medium text-emerald-600"
@@ -94,7 +135,7 @@ export default async function DashboardPage() {
             {atLimit ? (
               <p className="inline-flex flex-wrap items-center gap-1 text-sm text-amber-600">
                 You&apos;ve reached the Free plan limit.{" "}
-                <RequestUpgradeButton
+                <UpgradeButton
                   alreadyRequested={upgradeRequested}
                   className="font-medium text-amber-700 underline disabled:opacity-60"
                   requestedClassName="font-medium text-emerald-600"

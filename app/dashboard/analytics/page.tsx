@@ -1,4 +1,4 @@
-import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
+import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/dal";
 import { isPro } from "@/lib/plans";
@@ -25,7 +25,7 @@ export default async function AnalyticsPage() {
               Analytics is a Pro feature. Upgrade to see catalog views and your
               most-opened items over the last 30 days.
             </p>
-            <RequestUpgradeButton
+            <UpgradeButton
               alreadyRequested={Boolean(profile.upgrade_requested_at)}
               className="inline-flex rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
               requestedClassName="text-sm font-medium text-emerald-600"

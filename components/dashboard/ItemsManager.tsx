@@ -16,7 +16,7 @@ import {
 } from "@/app/dashboard/items/actions";
 import { ExportButton } from "@/components/catalog/ExportButton";
 import { ItemActionsMenu } from "@/components/dashboard/ItemActionsMenu";
-import { RequestUpgradeButton } from "@/components/dashboard/RequestUpgradeButton";
+import { UpgradeButton } from "@/components/billing/UpgradeButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -255,7 +255,7 @@ export function ItemsManager({
       {atLimit ? (
         <p className="mb-4 inline-flex flex-wrap items-center gap-1 text-sm text-amber-600">
           You&apos;ve reached the Free plan limit of {FREE_ITEM_LIMIT} items.{" "}
-          <RequestUpgradeButton
+          <UpgradeButton
             alreadyRequested={upgradeRequested}
             className="font-medium text-amber-700 underline disabled:opacity-60"
             requestedClassName="font-medium text-emerald-600"
